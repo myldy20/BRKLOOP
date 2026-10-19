@@ -191,3 +191,46 @@ body{background:linear-gradient(165deg,#171d25 0,#0d1116 38%,#11151a 100%);-webk
   .drum-name{min-height:58px;font-size:8px}
   .mix-strip-head .mute{min-width:35px}
 }
+
+/* ─── Sequencer parity: all 64 SLOOP steps editable, grouped into 16-step sections ─── */
+.pattern-meta{font-variant-numeric:tabular-nums;min-width:92px;text-align:center}
+.sequence-tools .length-field input{background:#222b35;color:#f0f3f5;border:1px solid #43505d;border-radius:7px;height:36px;width:63px;padding:0 7px;text-align:center;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.sequence-tools .division-field select{height:36px;min-width:82px;max-width:110px;font-weight:800}
+.pattern-jumps{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.pattern-jump{background:#252e38;border:1px solid #43505d;color:#bfcbd2;padding:8px 10px;border-radius:7px;text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.45px}
+.pattern-jump:active,.pattern-jump:focus-visible{border-color:var(--track);color:#fff}
+.pattern-section{border:1px solid #35414e;background:#192129;border-radius:10px;padding:12px;margin-bottom:12px;min-width:0;scroll-margin-top:12px}
+.pattern-section:last-child{margin-bottom:0}
+.pattern-section-title{color:#8f9eac;font-size:10px;letter-spacing:1.3px;font-weight:900;margin-bottom:7px}
+.pattern-section .drum-heading{margin-top:5px}
+.pattern-section .synth-groups{gap:12px}
+.pattern-section .drum-lane:last-child{margin-bottom:0}
+.step-editor{background:#202a33;border:1px solid #44515d;border-radius:10px;margin-top:13px;padding:12px}
+.step-editor-title{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:11px;font-weight:900;color:var(--track);letter-spacing:1px;margin-bottom:13px}
+.step-editor-subtitle{color:#84929e;font-size:9px;letter-spacing:.6px}
+.step-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:11px}
+.step-fields:last-child{margin-bottom:0}
+.step-fields label{display:flex;flex-direction:column;gap:6px;min-width:0;color:#b2c0cb;font-size:9px;font-weight:850;letter-spacing:.5px}
+.step-fields select,.step-fields input{width:100%;min-width:0;border:1px solid #4b5864;background:#18222b;color:#eef1f4;border-radius:7px;height:35px;padding:0 8px;font-size:12px;font-weight:750}
+.step-fields input{font-variant-numeric:tabular-nums}
+.step-expression{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:890px){
+  .pattern-meta{font-size:9px;min-width:0}
+  .sequence-tools{display:flex;flex-wrap:wrap;gap:7px}
+  .sequence-tools .length-field,.sequence-tools .division-field{font-size:9px;display:flex;gap:5px;align-items:center}
+  .sequence-tools .length-field input{height:34px;width:54px}
+  .sequence-tools .division-field select{height:34px;min-width:75px;padding:0 19px 0 8px}
+  .sequence-tools #note-wrap{max-width:105px}
+  .sequence-tools #note-wrap select{width:85px;padding-right:15px}
+  .sequence-tools #set-note{padding:0 8px;font-size:9px}
+  .sequence-tools .selected-info{margin-left:auto}
+  .pattern-section{padding:9px 7px;border-radius:8px;margin-bottom:10px}
+  .pattern-section-title{font-size:9px;margin-bottom:7px}
+  .pattern-section .synth-groups{gap:12px}
+  .pattern-jumps{gap:5px;margin:0 0 10px}
+  .pattern-jump{font-size:9px;padding:7px 8px}
+  .step-editor{padding:10px 8px}
+  .step-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .step-editor-title{font-size:10px}
+  .step-editor-subtitle{font-size:8px;text-align:right}
+}

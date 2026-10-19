@@ -41,10 +41,26 @@
       <div class="track-help">SELECT A TRACK<br>TO EDIT ITS PATTERN</div>
     </aside>
     <section class="sequence-panel panel" id="sequence-panel">
-      <div class="panel-top"><div><div class="eyebrow">01 / SEQUENCER</div><h1 id="pattern-title">PATTERN EDITOR</h1><p id="pattern-hint">Tap a step to toggle · select its pitch with the keyboard</p></div><div class="pattern-meta">16 STEPS <span>•</span> 1 BAR</div></div>
-      <div class="sequence-tools"><label>TRACK <select id="track-select" aria-label="Selected track"></select></label><label id="note-wrap">NOTE <select id="note-select" aria-label="Pitch for new notes"></select></label><button id="set-note" type="button" class="secondary-btn">SET STEP NOTE</button><span id="selected-info" class="selected-info">STEP --</span></div>
-      <div id="grid-wrap" class="grid-wrap"><div id="step-grid" class="step-grid"></div></div>
-      <div class="sequencer-bottom"><div class="legend"><span><i class="legend-mark active-mark"></i>NOTE / HIT</span><span><i class="legend-mark beat-mark"></i>BEAT</span><span><i class="legend-mark play-mark"></i>PLAYHEAD</span></div><div id="note-action-hint">TAP: TOGGLE · SHIFT/TAP REPLACE TO CHANGE NOTE</div></div>
+      <div class="panel-top"><div><div class="eyebrow">01 / SEQUENCER</div><h1 id="pattern-title">PATTERN EDITOR</h1><p id="pattern-hint">Tap a step to toggle · select its pitch with the keyboard</p></div><div class="pattern-meta" id="pattern-meta">16 STEPS <span>•</span> TRACK PATTERN</div></div>
+      <div class="sequence-tools"><label>TRACK <select id="track-select" aria-label="Selected track"></select></label><label id="note-wrap">NOTE <select id="note-select" aria-label="Pitch for new notes"></select></label><button id="set-note" type="button" class="secondary-btn">SET STEP NOTE</button><label class="length-field">LENGTH <input id="pattern-length" type="number" min="1" max="64" step="1" value="16" inputmode="numeric" aria-label="Track pattern length from 1 to 64 steps"></label><label class="division-field">DIV <select id="pattern-division" aria-label="Track step division"></select></label><span id="selected-info" class="selected-info">STEP --</span></div>
+      <nav id="pattern-jumps" class="pattern-jumps" aria-label="Jump to step groups" hidden></nav><div id="grid-wrap" class="grid-wrap"><div id="step-grid" class="step-grid"></div></div>
+      <div id="step-editor" class="step-editor" hidden>
+        <div class="step-editor-title"><span id="step-editor-title">STEP DETAILS</span><span class="step-editor-subtitle">EDIT SELECTED STEP · SOUND ENGINE DATA</span></div>
+        <div id="synth-step-fields" class="step-fields">
+          <label>NOTE 1<select id="voice-0"></select></label><label>NOTE 2<select id="voice-1"></select></label><label>NOTE 3<select id="voice-2"></select></label><label>NOTE 4<select id="voice-3"></select></label>
+          <label>GATE<select id="step-gate"><option value="0">NOTE</option><option value="1">TIE</option><option value="2">REST</option></select></label>
+          <label>VELOCITY<input id="step-velocity" type="number" min="1" max="127" step="1"></label>
+        </div>
+        <div id="drum-step-fields" class="step-fields" hidden>
+          <label>DRUM LEVEL<select id="drum-level"><option value="0">NORMAL</option><option value="1">GHOST</option><option value="2">SOFT</option><option value="3">HARD</option></select></label>
+          <label>RATCHET<select id="drum-ratchet"><option value="0">OFF</option><option value="1">×2</option><option value="2">×3</option><option value="3">×4</option></select></label>
+        </div>
+        <div class="step-fields step-expression">
+          <label>MICRO <input id="step-micro" type="number" min="-32" max="31" step="1" value="0"></label>
+          <label>FILL<select id="step-fill"><option value="0">NORMAL</option><option value="1">FILL ONLY</option><option value="2">NO FILL</option></select></label>
+        </div>
+      </div>
+      <div class="sequencer-bottom"><div class="legend"><span><i class="legend-mark active-mark"></i>NOTE / HIT</span><span><i class="legend-mark beat-mark"></i>BEAT</span><span><i class="legend-mark play-mark"></i>PLAYHEAD</span></div><div id="note-action-hint">TAP: TOGGLE · SHIFT+TAP: REPLACE PITCH</div></div>
       <div class="keyboard-block" id="keyboard-block"><div class="keyboard-heading"><div class="panel-label">KEYBOARD <span>TAP TO PLAY & SELECT NOTE</span></div><div class="octave-controls"><button type="button" id="octave-down" aria-label="Octave down">−</button><span id="octave-label">C3–C4</span><button type="button" id="octave-up" aria-label="Octave up">+</button></div></div><div id="keyboard" class="keyboard" aria-label="Piano keyboard"></div></div>
     </section>
     <aside class="sound-panel panel" id="sound-panel">
