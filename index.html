@@ -41,24 +41,24 @@
       <div class="track-help">SELECT A TRACK<br>TO EDIT ITS PATTERN</div>
     </aside>
     <section class="sequence-panel panel" id="sequence-panel">
-      <div class="panel-top"><div><div class="eyebrow">01 / SEQUENCER</div><h1 id="pattern-title">PATTERN EDITOR</h1><p id="pattern-hint">Tap steps to add or remove notes</p></div><div class="step-page"><button id="prev-page" type="button" aria-label="Previous eight steps">‹</button><span id="page-label">01–08</span><button id="next-page" type="button" aria-label="Next eight steps">›</button></div></div>
+      <div class="panel-top"><div><div class="eyebrow">01 / SEQUENCER</div><h1 id="pattern-title">PATTERN EDITOR</h1><p id="pattern-hint">Tap a step to toggle · select its pitch with the keyboard</p></div><div class="pattern-meta">16 STEPS <span>•</span> 1 BAR</div></div>
       <div class="sequence-tools"><label>TRACK <select id="track-select" aria-label="Selected track"></select></label><label id="note-wrap">NOTE <select id="note-select" aria-label="Pitch for new notes"></select></label><button id="set-note" type="button" class="secondary-btn">SET STEP NOTE</button><span id="selected-info" class="selected-info">STEP --</span></div>
       <div id="grid-wrap" class="grid-wrap"><div id="step-grid" class="step-grid"></div></div>
-      <div class="sequencer-bottom"><div class="legend"><span><i class="legend-mark active-mark"></i>NOTE / HIT</span><span><i class="legend-mark beat-mark"></i>BEAT</span><span><i class="legend-mark play-mark"></i>PLAYHEAD</span></div><div id="note-action-hint">CLICK: TOGGLE · SHIFT+CLICK: REPLACE NOTE</div></div>
-      <div class="keyboard-block" id="keyboard-block"><div class="panel-label">PLAY KEYS <span>TEST THE SELECTED SOUND</span></div><div id="keyboard" class="keyboard"></div></div>
+      <div class="sequencer-bottom"><div class="legend"><span><i class="legend-mark active-mark"></i>NOTE / HIT</span><span><i class="legend-mark beat-mark"></i>BEAT</span><span><i class="legend-mark play-mark"></i>PLAYHEAD</span></div><div id="note-action-hint">TAP: TOGGLE · SHIFT/TAP REPLACE TO CHANGE NOTE</div></div>
+      <div class="keyboard-block" id="keyboard-block"><div class="keyboard-heading"><div class="panel-label">KEYBOARD <span>TAP TO PLAY & SELECT NOTE</span></div><div class="octave-controls"><button type="button" id="octave-down" aria-label="Octave down">−</button><span id="octave-label">C3–C4</span><button type="button" id="octave-up" aria-label="Octave up">+</button></div></div><div id="keyboard" class="keyboard" aria-label="Piano keyboard"></div></div>
     </section>
     <aside class="sound-panel panel" id="sound-panel">
       <div class="panel-label">02 / SOUND DESIGN <span id="sound-track-id">TRACK 01</span></div>
       <div id="synth-sound"><label class="field-label">ENGINE <select id="engine-select"></select></label><label class="field-label">FACTORY PRESET <select id="preset-select"></select></label><div class="sound-block-title">MACROS <span>LIVE DSP</span></div><div id="engine-controls" class="knobs"></div></div>
       <div id="drum-sound" hidden><label class="field-label">DRUM KIT <select id="kit-select"></select></label><p class="microcopy">16 lanes of SLOOP drums. Tap a pad to audition it.</p><div id="drum-pads" class="drum-pads"></div></div>
-      <div class="sound-block-title">AMPLITUDE ENVELOPE <span>ADSR</span></div><div id="envelope-controls" class="knobs"></div>
+      <section id="env-section"><div class="sound-block-title">AMPLITUDE ENVELOPE <span>ADSR</span></div><div id="envelope-controls" class="knobs"></div></section>
       <div class="sound-block-title">TRACK FX <span>LIVE</span></div><div id="fx-controls" class="knobs"></div>
     </aside>
     <section class="mixer-panel panel" id="mixer-panel">
       <div class="panel-label">03 / MIXER <span>4 CHANNELS</span></div><div id="mixer" class="mixer-grid"></div>
     </section>
   </main>
-  <footer><span>BRKLOOP <b>EXPERIMENTAL</b> · SLOOP 2.7 / FELUCCA DSP · GPL-3.0-ONLY</span><span id="save-status">AUTOSAVE ON · LOCAL BROWSER</span></footer>
+  <footer><span>BRKLOOP <b>EXPERIMENTAL</b> · SLOOP 2.7 / FELUCCA DSP · GPL-3.0-ONLY</span><span id="save-status">AUTOSAVE · LOCAL DEVICE</span></footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script type="module" src="./app.js"></script>
