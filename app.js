@@ -10,7 +10,7 @@ const drumLanes = [[36,'KICK'],[35,'KICK 2'],[38,'SNARE'],[39,'CLAP'],[42,'HAT']
   [51,'RIDE'],[70,'SHAKER'],[63,'CONGA'],[56,'COWBELL']];
 const storeKey = 'brkloop.groove.v1';
 let bank, state, player, playing = false, selectedTrack = 0, selectedStep = -1;
-let mobilePage = 0, pitch = [45,60,72], transportPositions = [-1,-1,-1,-1], toastTimer;
+let selectedLane = -1, keyboardOctave = 3, pitch = [45,60,72], transportPositions = [-1,-1,-1,-1], toastTimer;
 const mobile = () => matchMedia('(max-width: 890px)').matches;
 const track = (k = selectedTrack) => state.tracks[k];
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -73,7 +73,7 @@ function renderTracks() {
   document.documentElement.style.setProperty('--track',colors[selectedTrack]);
 }
 function selectTrack(k) {
-  selectedTrack=k;selectedStep=-1;mobilePage=0;
+  selectedTrack=k;selectedStep=-1;selectedLane=-1;
   render();
 }
 function isOn(s){return s.n>0 && s.time===0;}
@@ -87,47 +87,67 @@ function synthStep(i, e) {
   changed();renderGrid();updateSelection();
 }
 function drumStep(i,lane) {
-  const d=track(3).dstep[i];selectedStep=i;d.on ^= (1<<lane);
+  const d=track(3).dstep[i];selectedStep=i;selectedLane=lane;d.on ^= (1<<lane);
   d.lvl[lane]=0;d.rat[lane]=0;
   changed();renderGrid();updateSelection();
 }
 function renderGrid() {
-  const grid=$('step-grid');grid.replaceChildren();
-  const drums=selectedTrack===3;grid.className='step-grid'+(drums?' drums':'');
-  const start=mobile()?mobilePage*8:0,n=mobile()?8:16;
-  grid.style.setProperty('--cols',String(n));
-  $('page-label').textContent=(start+1).toString().padStart(2,'0')+'–'+String(start+n).padStart(2,'0');
-  const head=el('div','step-head');
-  if(drums) head.append(el('div'));
-  for(let i=start;i<start+n;i++) head.append(el('div','step-no'+(i%4===0?' bar':''),String(i+1).padStart(2,'0')));
-  grid.append(head);
-  function button(i,active,text,callback) {
-    const b=el('button','step-cell'+(i%4===0?' beat':'')+(active?' active':'')+(i===selectedStep?' selected-step':''),text);
-    b.type='button';b.dataset.step=String(i);b.setAttribute('aria-label',drums?'Step '+(i+1)+' '+(active?'on':'off'): 'Step '+(i+1)+' '+(active?'note '+text:'off'));
-    b.setAttribute('aria-pressed',String(!!active));b.addEventListener('click',callback);return b;
+  const grid=$('step-grid'); grid.replaceChildren();
+  const drums=selectedTrack===3; grid.className='step-grid'+(drums?' drums':' synth');
+  function stepButton(i,active,text,callback,lane=-1) {
+    const currentSelection=i===selectedStep && (lane===-1 || lane===selectedLane);
+    const b=el('button','step-cell'+(i%4===0?' beat':'')+(active?' active':'')+(currentSelection?' selected-step':''));
+    b.type='button'; b.textContent=text; b.dataset.step=String(i);
+    b.setAttribute('aria-label',drums?drumLanes[lane][1]+', step '+(i+1)+', '+(active?'on':'off'):'Step '+(i+1)+', '+(active?'note '+text:'empty'));
+    b.setAttribute('aria-pressed',String(!!active));
+    b.addEventListener('click',callback);
+    return b;
   }
-  if(drums) {
+  if (drums) {
+    const heading=el('div','drum-heading');
+    heading.append(el('span','row-name','SOUND'));
+    const counts=el('div','drum-counts');
+    for(let i=0;i<16;i++) counts.append(el('span','step-no'+(i%4===0?' bar':''),String(i+1).padStart(2,'0')));
+    heading.append(counts);grid.append(heading);
     drumLanes.forEach(([note,name],lane)=>{
-      const row=el('div','step-row');row.append(el('div','row-name is-drum',name));
-      for(let i=start;i<start+n;i++) {
+      const row=el('div','drum-lane');
+      const label=el('button','row-name drum-name',name);
+      label.type='button';label.title='Audition '+name;
+      label.addEventListener('click',async()=>{
+        try{await ensureAudio();player.note(3,note,true);setTimeout(()=>player?.note(3,note,false),150);}catch(e){audioError(e);}
+      });
+      row.append(label);
+      const cells=el('div','drum-cells');
+      for(let i=0;i<16;i++){
         const active=!!(track(3).dstep[i].on&(1<<lane));
-        row.append(button(i,active,active?'●':'',()=>drumStep(i,lane)));
+        cells.append(stepButton(i,active,active?'●':'',()=>drumStep(i,lane),lane));
       }
-      grid.append(row);
+      row.append(cells);grid.append(row);
     });
   } else {
-    const row=el('div','step-row');
-    for(let i=start;i<start+n;i++) {
-      const s=track().step[i];
-      row.append(button(i,isOn(s),isOn(s)?noteName(s.notes[0]):'·',(e)=>synthStep(i,e)));
+    const groups=el('div','synth-groups');
+    for(let group=0;group<2;group++){
+      const panel=el('div','synth-bar'),head=el('div','synth-numbers'),row=el('div','synth-cells');
+      for(let i=group*8;i<group*8+8;i++){
+        head.append(el('span','step-no'+(i%4===0?' bar':''),String(i+1).padStart(2,'0')));
+        const step=track().step[i];
+        row.append(stepButton(i,isOn(step),isOn(step)?noteName(step.notes[0]):'·',(event)=>synthStep(i,event)));
+      }
+      panel.append(head,row);groups.append(panel);
     }
-    grid.append(row);
+    grid.append(groups);
   }
   paintPlayhead();
 }
 function paintPlayhead() {
   const pos=transportPositions[selectedTrack];
-  document.querySelectorAll('.step-cell[data-step]').forEach(b=>b.classList.toggle('current',playing && Number(b.dataset.step)===pos));
+  // A single low-contrast column tint, without per-cell pseudo-element stripes.
+  document.querySelectorAll('.step-cell[data-step]').forEach(b=>
+    b.classList.toggle('current',playing && Number(b.dataset.step)===pos));
+  document.querySelectorAll('.step-no').forEach(b=>{
+    const n=Number(b.textContent)-1;
+    b.classList.toggle('current-label',playing && n===pos);
+  });
 }
 function updateSelection() {
   $('selected-info').textContent=selectedStep<0?'STEP --':'STEP '+String(selectedStep+1).padStart(2,'0');
@@ -136,19 +156,43 @@ function renderKeyboard() {
   const panel=$('keyboard-block');panel.hidden=selectedTrack===3;
   if(selectedTrack===3)return;
   const keys=$('keyboard');keys.replaceChildren();
-  const root=clamp(pitch[selectedTrack]-6,36,84);
-  for(let n=root;n<=root+12;n++){
-    const black=[1,3,6,8,10].includes(n%12);
-    const b=el('button','key'+(black?' black':''),noteName(n));b.type='button';b.dataset.note=String(n);
-    b.addEventListener('pointerdown',async(e)=>{
-      e.preventDefault();
-      try{await ensureAudio();if(selectedTrack===3)return;player.note(selectedTrack,n,true);b.classList.add('down');}
-      catch(err){audioError(err);}
+  const base=(keyboardOctave+1)*12;
+  $('octave-label').textContent='C'+keyboardOctave+'–C'+(keyboardOctave+1);
+  // Real piano geometry: eight white keys C..C, sharps above the gaps.
+  const white=[0,2,4,5,7,9,11,12];
+  const black=[{semi:1,gap:1},{semi:3,gap:2},{semi:6,gap:4},{semi:8,gap:5},{semi:10,gap:6}];
+  const whites=el('div','piano-whites');
+  function bindKey(button,n) {
+    button.dataset.note=String(n);button.type='button';
+    button.setAttribute('aria-label','Play '+noteName(n));
+    button.classList.toggle('chosen',pitch[selectedTrack]===n);
+    let pressed=false,started=false;
+    button.addEventListener('pointerdown',async(e)=>{
+      e.preventDefault();pressed=true;
+      pitch[selectedTrack]=n;
+      $('note-select').value=String(n-24);
+      keys.querySelectorAll('.piano-key').forEach(k=>k.classList.toggle('chosen',Number(k.dataset.note)===n));
+      try{
+        await ensureAudio();
+        if(!button.isConnected || selectedTrack===3)return;
+        player.note(selectedTrack,n,true);started=true;button.classList.add('down');
+        if(!pressed) setTimeout(()=>{player?.note(selectedTrack,n,false);button.classList.remove('down');},210);
+      } catch(err){audioError(err);}
     });
-    const off=()=>{player?.note(selectedTrack,n,false);b.classList.remove('down');};
-    b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);
-    b.addEventListener('pointerleave',off);keys.append(b);
+    const up=()=>{pressed=false;if(started){started=false;player?.note(selectedTrack,n,false);button.classList.remove('down');}};
+    button.addEventListener('pointerup',up);button.addEventListener('pointercancel',up);
+    button.addEventListener('pointerleave',up);
   }
+  white.forEach(semi=>{
+    const n=base+semi,b=el('button','piano-key white-key',noteName(n));bindKey(b,n);whites.append(b);
+  });
+  keys.append(whites);
+  const blacks=el('div','piano-blacks');
+  black.forEach(({semi,gap})=>{
+    const n=base+semi,b=el('button','piano-key black-key',noteName(n));
+    b.style.left=(gap*100/8)+'%';bindKey(b,n);blacks.append(b);
+  });
+  keys.append(blacks);
 }
 function slider(parent,label,value,min,max,onChange){
   const wrap=el('label','knob'),top=el('span','knob-top');
@@ -166,7 +210,7 @@ function enumBox(parent,label,values,value,onChange){
 }
 function setParam(id,value){track().p[id]=value;changed();}
 function renderSound(){
-  const drum=selectedTrack===3,t=track();$('sound-track-id').textContent='TRACK 0'+(selectedTrack+1);
+  const drum=selectedTrack===3,t=track();$('env-section').hidden=drum;$('sound-track-id').textContent='TRACK 0'+(selectedTrack+1);
   $('synth-sound').hidden=drum;$('drum-sound').hidden=!drum;
   $('envelope-controls').replaceChildren();$('engine-controls').replaceChildren();$('fx-controls').replaceChildren();
   if(!drum){
@@ -218,9 +262,9 @@ function renderMixer(){
 function render(){
   renderTracks();
   $('pattern-title').textContent=selectedTrack===3?'DRUM MACHINE':'NOTE SEQUENCER';
-  $('pattern-hint').textContent=selectedTrack===3?'16 SLOOP drum lanes · 16 steps':'Click to toggle · Shift+click to write the selected pitch';
+  $('pattern-hint').textContent=selectedTrack===3?'16 sounds · 16 steps · one continuous pattern':'All 16 steps visible · choose a pitch on the keyboard';
   $('note-wrap').hidden=selectedTrack===3;$('set-note').hidden=selectedTrack===3;
-  $('note-action-hint').textContent=selectedTrack===3?'TAP A CELL TO TRIGGER A DRUM HIT':'CLICK: TOGGLE · SHIFT+CLICK: REPLACE NOTE';
+  $('note-action-hint').textContent=selectedTrack===3?'TAP TO TOGGLE · TAP SOUND NAME TO PREVIEW':'TAP TO TOGGLE · SHIFT+TAP TO REPLACE NOTE';
   opts($('note-select'),Array.from({length:73},(_,i)=>noteName(i+24)),pitch[selectedTrack] == null?0:pitch[selectedTrack]-24);
   $('bpm').value=String(state.g[0]);$('swing').value=String(state.g[1]);
   renderGrid();renderSound();renderMixer();renderKeyboard();updateSelection();
@@ -293,7 +337,7 @@ async function importProject(file){
     if(file.size>2000000)throw new Error('File too large');
     const parsed=JSON.parse(await file.text());
     if(!projectValid(parsed))throw new Error('Not a compatible BRKLOOP V1 project');
-    stop();state=parsed.state;selectedTrack=0;selectedStep=-1;mobilePage=0;
+    stop();state=parsed.state;selectedTrack=0;selectedStep=-1;selectedLane=-1;
     changed(true);persist();toast('Project imported');
   }catch(e){toast('Import failed: '+e.message);}
 }
@@ -314,8 +358,8 @@ function wireEvents(){
   $('engine-select').addEventListener('change',e=>applyPreset(Number(e.target.value),0));
   $('preset-select').addEventListener('change',e=>applyPreset(track().engine,Number(e.target.value)));
   $('kit-select').addEventListener('change',e=>{track(3).p[bank.pe0]=Number(e.target.value);changed(true);});
-  $('prev-page').addEventListener('click',()=>{mobilePage=0;renderGrid();});
-  $('next-page').addEventListener('click',()=>{mobilePage=1;renderGrid();});
+  $('octave-down').addEventListener('click',()=>{keyboardOctave=clamp(keyboardOctave-1,1,7);renderKeyboard();});
+  $('octave-up').addEventListener('click',()=>{keyboardOctave=clamp(keyboardOctave+1,1,7);renderKeyboard();});
   $('random').addEventListener('click',randomize);$('clear').addEventListener('click',clearPattern);
   $('save').addEventListener('click',exportProject);$('import').addEventListener('click',()=>$('file').click());
   $('file').addEventListener('change',e=>{importProject(e.target.files[0]);e.target.value='';});
