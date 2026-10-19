@@ -48,4 +48,5 @@ const bank = {format:'BRKLOOP_BANK_V1', source:'SLOOP 2.7.x', pe0:info.pe0, base
 if (engines.reduce((n,e)=>n+e.presets.length,0) < 100 || bank.kits.length < 35) throw new Error('Incomplete extracted factory bank');
 mkdirSync('dist', {recursive:true});
 writeFileSync('dist/bank.json', JSON.stringify(bank));
+m.stop();
 console.log('BRKLOOP bank:', engines.length, 'engines,', engines.reduce((n,e)=>n+e.presets.length,0), 'factory sounds,',bank.kits.length,'kits');
