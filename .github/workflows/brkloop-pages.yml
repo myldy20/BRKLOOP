@@ -1,0 +1,66 @@
+name: BRKLOOP web groovebox
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: brkloop-pages
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Build SLOOP DSP and static app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: |
+          python -m pip install Pillow
+          sudo apt-get update -qq
+          sudo apt-get install -y clang lld
+      - name: Build factory bank from SLOOP
+        run: node tools/build_brkloop_bank.mjs
+      - name: Build browser AudioWorklet DSP
+        run: python tools/build_preview.py
+      - name: Verify SLOOP's native/WASM audio equivalence
+        run: sh tests/run_preview_tests.sh
+      - name: Validate BRKLOOP scripts and assets
+        run: |
+          node --check app.js
+          node --check web/preview.js
+          node --check web/preview-worklet.js
+          test -s dist/bank.json
+          test -s build/preview/sloop-preview.wasm
+      - name: Assemble static Pages site
+        run: |
+          mkdir -p dist/site/web
+          cp index.html styles.css app.js dist/site/
+          cp web/preview.js web/preview-worklet.js dist/site/web/
+          cp build/preview/sloop-preview.wasm dist/site/web/
+          cp dist/bank.json dist/site/bank.json
+          cp LICENSE LICENSING.md dist/site/
+          touch dist/site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          path: dist/site
+  deploy:
+    name: Publish GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
