@@ -45,6 +45,12 @@ try{
     assert.equal(await page.locator('#prev-page').count(),0,'obsolete paginator absent');
     assert.equal(await page.locator('#next-page').count(),0,'obsolete paginator absent');
     // Native SLOOP allows 1..64 independent steps per track; expose the whole range without pagination.
+    for(const len of [17,32]){
+      await page.locator('#pattern-length').fill(String(len));
+      await page.locator('#pattern-length').press('Tab');
+      assert.equal(await page.locator('.synth-cells .step-cell').count(),len,'pattern length '+len+' exposes every step');
+      assert.equal(await page.locator('.synth-cells .step-cell[data-step="'+(len-1)+'"]').count(),1,'last step is reachable at '+len);
+    }
     await page.locator('#pattern-length').fill('64');
     await page.locator('#pattern-length').press('Tab');
     assert.equal(await page.locator('.synth-cells .step-cell').count(),64,'full 64-step synth pattern must be editable');
