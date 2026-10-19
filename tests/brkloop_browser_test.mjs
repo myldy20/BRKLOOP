@@ -44,12 +44,56 @@ try{
     assert.equal(await page.locator('.white-key').last().textContent(),'C4');
     assert.equal(await page.locator('#prev-page').count(),0,'obsolete paginator absent');
     assert.equal(await page.locator('#next-page').count(),0,'obsolete paginator absent');
+    // Native SLOOP allows 1..64 independent steps per track; expose the whole range without pagination.
+    await page.locator('#pattern-length').fill('64');
+    await page.locator('#pattern-length').press('Tab');
+    assert.equal(await page.locator('.synth-cells .step-cell').count(),64,'full 64-step synth pattern must be editable');
+    assert.equal(await page.locator('.pattern-section').count(),4,'4 sequential 16-step groups');
+    assert.equal(await page.locator('.synth-cells .step-cell[data-step="63"]').count(),1,'last step 64 is reachable');
+    await page.locator('.synth-cells .step-cell[data-step="63"]').click();
+    assert.equal(await page.locator('#step-editor').isVisible(),true,'selected step has parameter editor');
+    await page.locator('#voice-0').selectOption('73');
+    await page.locator('#step-micro').fill('-12');
+    await page.locator('#step-micro').press('Tab');
+    await page.locator('#step-fill').selectOption('1');
+    await page.locator('#pattern-division').selectOption('3');
+    await page.waitForTimeout(450);
+    const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('brkloop.groove.v1')));
+    assert.equal(before.state.tracks[0].p[29],64,'sequencer length follows firmware param 29');
+    assert.equal(before.state.tracks[0].p[30],3,'division follows firmware param 30');
+    assert.equal(before.state.tracks[0].step[63].notes[0],73,'edited step 64 note saved');
+    assert.equal(before.state.tracks[0].micro[63],-12,'step 64 microtiming saved');
+    assert.equal((before.state.tracks[0].fill[15]>>6)&3,1,'step 64 fill condition saved');
+    // Reducing length is non-destructive: original data beyond length survives.
+    await page.locator('#pattern-length').fill('16');
+    await page.locator('#pattern-length').press('Tab');
+    assert.equal(await page.locator('.synth-cells .step-cell').count(),16);
+    await page.locator('#pattern-length').fill('64');
+    await page.locator('#pattern-length').press('Tab');
+    assert.equal(await page.locator('.synth-cells .step-cell[data-step="63"]').textContent(),'C#5');
+    await page.locator('#pattern-length').fill('16');
+    await page.locator('#pattern-length').press('Tab');
+    await page.waitForTimeout(250);
+    await page.screenshot({path:'ui-shots/'+device.name+'-64-step.png',fullPage:true});
     await page.screenshot({path:'ui-shots/'+device.name+'-sequence.png',fullPage:true});
     await page.locator('.track-card').last().click();
     assert.equal(await page.locator('.drum-lane').count(),16);
     assert.equal(await page.locator('.drum-cells .step-cell').count(),256);
     await page.locator('.drum-cells .step-cell').first().click();
     assert.equal(await page.locator('.drum-cells .selected-step').count(),1,'drum selection cannot highlight every lane');
+    await page.locator('#drum-level').selectOption('3');
+    await page.locator('#drum-ratchet').selectOption('1');
+    await page.waitForTimeout(250);
+    const drumState=await page.evaluate(()=>JSON.parse(localStorage.getItem('brkloop.groove.v1')).state.tracks[3].dstep[0]);
+    assert.equal(drumState.lvl[0],3,'drum-level persisted');
+    assert.equal(drumState.rat[0],1,'drum-ratchet persisted');
+    await page.locator('#pattern-length').fill('64');
+    await page.locator('#pattern-length').press('Tab');
+    assert.equal(await page.locator('.drum-cells .step-cell').count(),1024,'all drum lanes × 64 steps must be available');
+    assert.equal(await page.locator('.drum-cells .step-cell[data-step="63"]').count(),16,'step 64 on every lane');
+    await page.locator('#pattern-length').fill('16');
+    await page.locator('#pattern-length').press('Tab');
+
     if(device.name==='phone'){
       const width=await page.evaluate(()=>({body:document.documentElement.scrollWidth,viewport:innerWidth}));
       assert(width.body<=width.viewport+1,'horizontal overflow: '+JSON.stringify(width));
