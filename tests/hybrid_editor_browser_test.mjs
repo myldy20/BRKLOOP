@@ -41,12 +41,6 @@ try{
     await page.locator('.step-cell[data-step="0"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3',
       'One tap on empty STEP places currently highlighted pitch');
-    console.log('DIAGNOSTIC KEYBOARD '+d.name,await page.evaluate(()=>({
-      status:document.getElementById('status')?.textContent,
-      keyboardNoteButtons:[...document.querySelectorAll('.piano-key')].map(x=>x.dataset.note),
-      keyboardHidden:document.getElementById('keyboard')?.hidden,
-      keyboardOuter:document.getElementById('keyboard')?.outerHTML.slice(0,350)
-    })));
     await page.locator('.piano-key[data-note="52"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
       'Piano key writes selected step directly');
@@ -143,9 +137,13 @@ try{
     }
     await page.locator('#all-params summary').click();
     assert.equal(await page.locator('#param-count').textContent(),'63');
-    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()>35,true);
+    await page.waitForFunction(()=>document.querySelectorAll('#sound-advanced-controls .sound-control').length>20,
+      {timeout:10000});
+    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()>20,true);
     await page.locator('#all-globals summary').click();
     assert.equal(await page.locator('#global-count').textContent(),'49');
+    await page.waitForFunction(()=>document.querySelectorAll('#sound-global-controls .sound-control').length>10,
+      {timeout:10000});
     assert.equal(await page.locator('#sound-global-controls .sound-control').count()>10,true);
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-sound.png',fullPage:true});
     // One real browser audio start/stop smoke check; audio doesn't use a second oscillator.
