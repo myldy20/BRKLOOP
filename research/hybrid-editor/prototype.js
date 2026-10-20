@@ -5,6 +5,7 @@ import {LocalPreview} from '../../web/preview.js';
 import {panelAuditionPitch} from './panel-pitch.mjs';
 import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
 import {generateMelodicIdea,melodicIdeaSummary} from '../melodic-ideas.mjs';
+import {mutateExistingPattern} from '../pattern-mutate.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -41,7 +42,7 @@ for(let k=0;k<seed.tracks.length;k++){
   }
 }
 const session=createResearchEditSession(seed);
-let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1;
+let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -56,6 +57,12 @@ function soundState(){
   if(melodyDraft)state.tracks[melodyDraft.track].step=melodyDraft.steps.map(s=>({
     ...s,notes:[...s.notes]
   }));
+  if(mutationDraft){
+    const t=state.tracks[mutationDraft.trackIndex];
+    const prop=mutationDraft.drums?'dstep':'step';
+    t[prop]=mutationDraft.steps.map(s=>structuredClone(s));
+    t.micro=[...mutationDraft.micro];
+  }
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
@@ -63,7 +70,7 @@ function status(message){$('status').textContent=message;}
 function commit(cmd){
   try{
     const edited=session.dispatch(cmd);
-    if(edited){grooveDraft=null;melodyDraft=null;player?.sync();}
+    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
     render();
     return edited;
   }catch(e){status(e.message);render();return false;}
@@ -189,7 +196,7 @@ function renderTracks(){
     b.append(newEl('small','',String(k+1).padStart(2,'0')),newEl('strong','',name));
     b.append(newEl('span','',k===3?(bank.kits[session.getState().tracks[3].p[bank.pe0]]||'16 lanes'):(bank.engines[session.getState().tracks[k].engine]?.presets[session.getState().tracks[k].preset]?.name||'CUSTOM')));
     b.addEventListener('click',()=>{
-      if(k!==v.track&&(grooveDraft||melodyDraft)){grooveDraft=null;melodyDraft=null;player?.sync();}
+      if(k!==v.track&&(grooveDraft||melodyDraft||mutationDraft)){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
       session.select(k,Math.min(v.step,clamp(session.getState().tracks[k].p[29],1,64)-1));
       session.setMode(modeForTrack[k]);chord=false;chordNotes=[];render();
     });
@@ -491,6 +498,7 @@ function previewGroove(next){
   const {v,state}=current();
   if(v.track!==3)return;
   if(next)grooveSeed=(grooveSeed+1)>>>0;
+  mutationDraft=null;melodyDraft=null;
   grooveDraft=generateDrumGroove({length:state.tracks[3].p[29],
     style:$('groove-style').value,seed:grooveSeed});
   player?.sync();render();
@@ -542,13 +550,65 @@ function previewMelody(next){
     rhythm:$('melody-rhythm').value,scale:$('melody-scale').value,
     progression:$('melody-progression').value,root:Number($('melody-root').value),
     seed:melodySeed});
-  melodyDraft={...idea,track:v.track};grooveDraft=null;
+  melodyDraft={...idea,track:v.track};grooveDraft=null;mutationDraft=null;
   player?.sync();render();
   status('PREVIEW '+idea.role+' / '+idea.scale+' / #'+idea.seed+' · Apply to save');
 }
+function renderMutation(){
+  const {v,track}=current(),length=clamp(track.p[29],1,64);
+  const drums=v.track===3,existing=drums?track.dstep:track.step;
+  const draft=mutationDraft?.trackIndex===v.track?mutationDraft:null;
+  const proposed=draft?.steps||existing;
+  const active=(s)=>drums?s.on!==0:s.time===0&&s.n>0;
+  const sourceEvents=existing.slice(0,length).filter(active).length;
+  $('mutation-preserved').textContent='SOURCE / '+sourceEvents+' STEPS';
+  $('mutation-apply').disabled=!draft?.changed;
+  $('mutation-cancel').disabled=!draft;
+  $('mutation-meta').textContent=draft?
+    'DRAFT #'+draft.seed+' · '+draft.original+' → '+draft.after+
+      (drums?' HITS':' NOTES')+
+      (draft.changed?' · original unchanged until Apply':' · no eligible change — try another focus'):
+    sourceEvents?'CURRENT PART · Mutations draw only from this track':
+      'EMPTY PART · Write notes/hits or generate a part first';
+  const visual=$('mutation-visual');visual.replaceChildren();
+  for(let base=0;base<length;base+=16){
+    const row=newEl('div','mutation-mini-row');
+    const width=Math.min(16,length-base);
+    row.style.gridTemplateColumns='42px repeat('+width+',minmax(14px,1fr))';
+    row.append(newEl('span','groove-row-name',String(base+1).padStart(2,'0')));
+    for(let i=base;i<base+width;i++){
+      const before=existing[i],after=proposed[i];
+      const changed=JSON.stringify(before)!==JSON.stringify(after)||
+        (draft&&draft.micro[i]!==track.micro[i]);
+      const present=active(after);
+      const label=drums?'drum lanes '+(after.on.toString(2).split('1').length-1):
+        after.time===0?after.notes.slice(0,after.n).map(noteName).join('+'):'rest';
+      const dot=newEl('span','mutation-mini-cell'+(present?' on':'')+(changed?' changed':'')+(i%4===0?' beat':''),
+        changed?'◆':present?'●':'·');
+      dot.dataset.step=String(i);dot.title='Step '+(i+1)+': '+label+(changed?' (changed)':'');
+      dot.setAttribute('aria-label','Step '+(i+1)+(changed?' changed':'')+': '+label);
+      row.append(dot);
+    }
+    visual.append(row);
+  }
+}
+function cancelMutation(){
+  if(mutationDraft){mutationDraft=null;player?.sync();}
+  render();status('MUTATION CANCELLED · previous pattern restored');
+}
+function previewMutation(next){
+  const {v,track}=current();
+  if(next)mutationSeed=(mutationSeed+1)>>>0;
+  const draft=mutateExistingPattern({track,trackIndex:v.track,length:track.p[29],
+    mode:$('mutation-mode').value,amount:Number($('mutation-amount').value),seed:mutationSeed});
+  mutationDraft=draft;grooveDraft=null;melodyDraft=null;
+  player?.sync();render();
+  status(draft.changed?'PREVIEW '+draft.mode+' / #'+draft.seed+' · original unchanged':
+    'NO CHANGE · add source notes/hits or select another mutation focus');
+}
 function selectWorkspace(tab){
   if(tab!=='pattern'&&tab!=='sound')return;
-  if(tab!=='pattern'&&(grooveDraft||melodyDraft)){grooveDraft=null;melodyDraft=null;player?.sync();}
+  if(tab!=='pattern'&&(grooveDraft||melodyDraft||mutationDraft)){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
   workspaceTab=tab;
   // A keyboard in Sound is an audition tool; a hidden keyboard in Roll frees
   // vertical screen space so musicians never scroll back to Draw/Erase.
@@ -573,6 +633,7 @@ function render(){
     renderInspector();
     renderGroove();
     renderMelody();
+    renderMutation();
   }
   $('bpm').value=String(current().state.g[0]);
   $('swing').value=String(current().state.g[1]);
@@ -620,6 +681,24 @@ $('melody-apply').addEventListener('click',()=>{
 $('melody-cancel').addEventListener('click',()=>cancelMelody());
 for(const id of ['melody-role','melody-root','melody-scale','melody-progression','melody-rhythm'])
   $(id).addEventListener('change',()=>cancelMelody());
+$('mutation-preview').addEventListener('click',()=>previewMutation(false));
+$('mutation-next').addEventListener('click',()=>previewMutation(true));
+$('mutation-apply').addEventListener('click',()=>{
+  if(!mutationDraft||!mutationDraft.changed||current().v.track!==mutationDraft.trackIndex)return;
+  const draft=mutationDraft;
+  if(commit({type:'applyPatternMutation',track:draft.trackIndex,length:draft.length,
+    steps:draft.steps,micro:draft.micro}))
+    status('MUTATION APPLIED · '+draft.mode+' / #'+draft.seed+' · one Undo');
+});
+$('mutation-cancel').addEventListener('click',()=>cancelMutation());
+$('mutation-mode').addEventListener('change',()=>cancelMutation());
+$('mutation-amount').addEventListener('input',()=>{
+  $('mutation-amount-value').textContent=$('mutation-amount').value+'%';
+  // Avoid rebuilding a range control while a finger is dragging it.
+  if(mutationDraft){mutationDraft=null;player?.sync();}
+  $('mutation-apply').disabled=true;$('mutation-cancel').disabled=true;
+  $('mutation-meta').textContent='Settings changed · press PREVIEW MUTATION again';
+});
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
 $('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
 $('toggle-keyboard').addEventListener('click',()=>{keyboardVisible=!keyboardVisible;render();});
@@ -656,8 +735,8 @@ $('length').addEventListener('change',e=>{
 });
 $('division').addEventListener('change',e=>commit({type:'setDivision',track:current().v.track,division:Number(e.target.value)}));
 $('auto').addEventListener('change',e=>{auto=e.target.checked;render();});
-$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;session.undo();render();player?.sync();});
-$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;session.redo();render();player?.sync();});
+$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;session.undo();render();player?.sync();});
+$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;session.redo();render();player?.sync();});
 $('clear').addEventListener('click',eraseSelected);
 $('rest').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:2});});
 $('tie').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:1});});
