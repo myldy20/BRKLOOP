@@ -50,6 +50,8 @@ jobs:
           node --check web/preview.js
           node --check web/preview-worklet.js
           node --check research/shared-edit-commands.mjs
+          node --check research/groove-tools.mjs
+          node tests/groove_tools_test.mjs
           node --check research/hybrid-editor/prototype.js
           node --check research/hybrid-editor/panel-pitch.mjs
           test -s dist/bank.json
@@ -65,7 +67,7 @@ jobs:
           cp dist/audit/bank-v2-candidate.json dist/site/bank-preview-v2.json
           cp LICENSE LICENSING.md dist/site/
           cp preview/index.html dist/site/preview/
-          cp research/shared-edit-commands.mjs dist/site/research/
+          cp research/shared-edit-commands.mjs research/groove-tools.mjs dist/site/research/
           cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js research/hybrid-editor/panel-pitch.mjs dist/site/research/hybrid-editor/
           touch dist/site/.nojekyll
       - name: Browser regression (phone + desktop)
