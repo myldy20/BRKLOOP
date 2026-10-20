@@ -696,7 +696,8 @@ $('mutation-amount').addEventListener('input',()=>{
   $('mutation-amount-value').textContent=$('mutation-amount').value+'%';
   // Avoid rebuilding a range control while a finger is dragging it.
   if(mutationDraft){mutationDraft=null;player?.sync();}
-  $('mutation-apply').disabled=true;$('mutation-cancel').disabled=true;
+  // Rebuild the diff only: leave the moving range input attached to the DOM.
+  renderMutation();
   $('mutation-meta').textContent='Settings changed · press PREVIEW MUTATION again';
 });
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
