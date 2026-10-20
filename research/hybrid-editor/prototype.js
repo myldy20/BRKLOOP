@@ -291,18 +291,132 @@ function renderKeyboard(){
     b.addEventListener('click',()=>midiKey(n));kb.append(b);
   }
 }
+
+function optionList(select,labels,value){
+  select.replaceChildren();
+  labels.forEach((name,i)=>{
+    const opt=newEl('option','',String(name));opt.value=String(i);select.append(opt);
+  });
+  select.value=String(value);
+}
+function soundControl(container,descriptor,value,command,displayName){
+  if(!descriptor || descriptor.max<=descriptor.min || descriptor.label==='-')return;
+  const parent=newEl('label','sound-control');
+  const top=newEl('span','control-title'),name=newEl('span','',displayName||descriptor.label);
+  const out=newEl('output','',String(value));
+  top.append(name,out);parent.append(top);
+  const values=descriptor.names||[];
+  const named=values.length>0 && values.length===descriptor.max-descriptor.min+1 && values.length<=128;
+  if(named){
+    const select=newEl('select');
+    optionList(select,values,value-descriptor.min);
+    out.textContent=values[value-descriptor.min]||String(value);
+    select.addEventListener('change',()=>command(descriptor.min+Number(select.value)));
+    parent.append(select);
+  }else{
+    const range=newEl('input');
+    range.type='range';range.min=String(descriptor.min);range.max=String(descriptor.max);
+    range.step='1';range.value=String(value);
+    range.addEventListener('input',()=>{out.textContent=range.value;});
+    range.addEventListener('change',()=>command(Number(range.value)));
+    parent.append(range);
+  }
+  container.append(parent);
+}
+function renderSound(){
+  const {v,track}=current(),drums=v.track===3;
+  $('sound-title').textContent=drums?'Drum kit & effects':bank.engines[track.engine].name+' · '+(bank.engines[track.engine].presets[track.preset]?.name||'Custom');
+  $('engine-wrap').hidden=drums;$('preset-wrap').hidden=drums;$('kit-wrap').hidden=!drums;
+  $('sound-macros').replaceChildren();$('sound-shape').replaceChildren();$('sound-fx').replaceChildren();
+  $('sound-advanced-controls').replaceChildren();$('sound-global-controls').replaceChildren();
+  const writeParam=(id,value)=>commit({type:'setTrackParam',track:v.track,param:id,value});
+  const common=bank.trackControls;
+  if(!drums){
+    optionList($('engine-select'),bank.engines.map(x=>x.name),track.engine);
+    optionList($('preset-select'),bank.engines[track.engine].presets.map(x=>x.name),track.preset);
+    bank.engines[track.engine].controls.forEach((c,i)=>{
+      const index=bank.pe0+i;
+      soundControl($('sound-macros'),c,track.p[index],value=>writeParam(index,value),c.label);
+    });
+  }else{
+    optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
+    $('sound-macros').append(newEl('p','hint','16 SLOOP drum lanes · select a kit and play the pads below.'));
+  }
+  const shape=drums?[0,39,50]:track.engine===9?[0,39,50]:[0,39,1,2,3,4,50];
+  for(const id of shape)soundControl($('sound-shape'),common[id],track.p[id],v=>writeParam(id,v));
+  if(track.engine===9 && !drums)
+    $('sound-shape').append(newEl('p','hint','FM6 envelopes are stored in its separate operator patch.'));
+  for(const id of [34,35,36,53,54,55,56,57])
+    soundControl($('sound-fx'),common[id],track.p[id],v=>writeParam(id,v));
+  if($('all-params').open)for(const d of common)
+    soundControl($('sound-advanced-controls'),d,track.p[d.id],v=>writeParam(d.id,v),
+      String(d.id).padStart(2,'0')+' / '+d.label);
+  if($('all-globals').open)for(const d of bank.globalControls)
+    soundControl($('sound-global-controls'),d,current().state.g[d.id],v=>commit({type:'setGlobalParam',track:v.track,param:d.id,value:v}),
+      String(d.id).padStart(2,'0')+' / '+d.label);
+  $('param-count').textContent=String(bank.trackControls.length);
+  $('global-count').textContent=String(bank.globalControls.length);
+}
+function selectWorkspace(tab){
+  if(tab!=='pattern'&&tab!=='sound')return;
+  workspaceTab=tab;
+  // A keyboard in Sound is an audition tool; a hidden keyboard in Roll frees
+  // vertical screen space so musicians never scroll back to Draw/Erase.
+  keyboardVisible=tab==='sound'||current().v.mode==='step';
+  render();
+}
 function render(){
-  const {v}=current();
-  renderTracks();renderOptions();
-  if(v.mode==='step')renderStep();else renderRoll();
-  renderInspector();renderKeyboard();
+  const {v,track}=current();
+  const sound=workspaceTab==='sound';
+  $('workspace').classList.toggle('sound-open',sound);
+  $('pattern-panel').hidden=sound;$('sound-panel').hidden=!sound;$('inspector').hidden=sound;
+  $('pattern-tab').setAttribute('aria-pressed',String(!sound));
+  $('sound-tab').setAttribute('aria-pressed',String(sound));
+  $('sound-name').textContent=v.track===3?bank.kits[track.p[bank.pe0]]:
+    (bank.engines[track.engine]?.name+' / '+bank.engines[track.engine]?.presets[track.preset]?.name);
+  renderTracks();
+  if(sound)renderSound();
+  else{
+    renderOptions();
+    if(v.mode==='step')renderStep();else renderRoll();
+    renderInspector();
+  }
+  $('keyboard').hidden=!keyboardVisible;
+  $('keyboard-area').classList.toggle('keys-collapsed',!keyboardVisible);
+  $('toggle-keyboard').textContent=keyboardVisible?'HIDE KEYS':'SHOW KEYS';
+  $('toggle-keyboard').setAttribute('aria-pressed',String(keyboardVisible));
+  renderKeyboard();
+  const history=session.history();
+  $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+$('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
+$('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
+$('toggle-keyboard').addEventListener('click',()=>{keyboardVisible=!keyboardVisible;render();});
+$('quick-erase').addEventListener('click',eraseSelected);
+$('roll-down').addEventListener('click',()=>{rollOctave=clamp(rollOctave-1,1,8);render();});
+$('roll-up').addEventListener('click',()=>{rollOctave=clamp(rollOctave+1,1,8);render();});
 for(const mode of ['step','roll'])$(mode+'-mode').addEventListener('click',()=>{
+  const from=$('grid').querySelector('.roll-scroll');
+  if(from)rollScroll={left:from.scrollLeft,top:from.scrollTop};
   modeForTrack[current().v.track]=mode;
-  session.setMode(mode);render();
+  session.setMode(mode);
+  keyboardVisible=mode==='step';
+  render();
 });
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;render();}));
+$('engine-select').addEventListener('change',e=>{
+  const {v}=current(),engine=Number(e.target.value),preset=bank.engines[engine].presets[0];
+  commit({type:'setFactorySound',track:v.track,engine,preset:0,p:preset.p,fm6:preset.fm6});
+});
+$('preset-select').addEventListener('change',e=>{
+  const {v,track}=current(),index=Number(e.target.value),preset=bank.engines[track.engine].presets[index];
+  commit({type:'setFactorySound',track:v.track,engine:track.engine,preset:index,p:preset.p,fm6:preset.fm6});
+});
+$('kit-select').addEventListener('change',e=>{
+  const {v}=current();commit({type:'setTrackParam',track:v.track,param:bank.pe0,value:Number(e.target.value)});
+});
+$('all-params').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&$('all-params').open)renderSound();});
+$('all-globals').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&$('all-globals').open)renderSound();});
 $('length').addEventListener('change',e=>{
   const {v}=current(),length=clamp(Number(e.target.value)||16,1,64);
   if(commit({type:'setLength',track:v.track,length})){
@@ -314,11 +428,7 @@ $('division').addEventListener('change',e=>commit({type:'setDivision',track:curr
 $('auto').addEventListener('change',e=>{auto=e.target.checked;render();});
 $('undo').addEventListener('click',()=>{session.undo();render();player?.sync();});
 $('redo').addEventListener('click',()=>{session.redo();render();player?.sync();});
-$('clear').addEventListener('click',()=>{
-  const {v,track}=current();
-  if(v.track===3){if(track.dstep[v.step].on&(1<<drumLane))commit({type:'toggleDrumHit',track:v.track,step:v.step,lane:drumLane});}
-  else commit({type:'clearNotes',track:v.track,step:v.step});
-});
+$('clear').addEventListener('click',eraseSelected);
 $('rest').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:2});});
 $('tie').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:1});});
 $('velocity').addEventListener('change',e=>{const {v}=current();if(v.track!==3)commit({type:'setVelocity',track:v.track,step:v.step,value:Number(e.target.value)});});
@@ -337,8 +447,7 @@ $('chord-done').addEventListener('click',()=>{
 $('chord-cancel').addEventListener('click',()=>{chord=false;chordNotes=[];render();});
 $('play').addEventListener('click',async()=>{
   try{
-    if(!player)player=new LocalPreview(soundState,e=>status(e.message));
-    await player.start();player.play(true);playing=true;status('PLAYING / SLOOP WASM');
+    await ensureAudio();player.play(true);playing=true;status('PLAYING / SLOOP WASM');
   }catch(e){status(e.message);}
 });
 $('stop').addEventListener('click',()=>{player?.play(false);player?.panic();playing=false;status('STOPPED');});
