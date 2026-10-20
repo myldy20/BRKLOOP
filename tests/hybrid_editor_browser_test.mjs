@@ -82,6 +82,13 @@ try{
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●',
       'Drum native hit is shared across both editors');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-drums.png',fullPage:true});
+    // One real browser audio start/stop smoke check: the research canvas shares
+    // the original SLOOP AudioWorklet, never a synthetic oscillator.
+    await page.locator('#play').click();
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING / SLOOP WASM'),
+      {timeout:15000});
+    await page.locator('#stop').click();
+    assert.equal(await page.locator('#status').textContent(),'STOPPED');
     const widths=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,view:innerWidth}));
     assert(widths.doc<=widths.view+1,'Unintended page horizontal overflow '+JSON.stringify(widths));
     assert.deepEqual(failures,[],d.name+' JavaScript console exceptions');
