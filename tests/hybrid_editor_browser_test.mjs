@@ -29,7 +29,10 @@ try{
     const context=await browser.newContext({viewport:d.viewport,isMobile:d.isMobile||false,hasTouch:d.hasTouch||false});
     const page=await context.newPage();
     const failures=[];page.on('pageerror',e=>failures.push(e.message));
-    await page.goto('http://127.0.0.1:'+server.address().port+'/research/hybrid-editor/',{waitUntil:'networkidle'});
+    // Exercise the exact public GitHub Pages entrypoint, including its stable alias.
+    await page.goto('http://127.0.0.1:'+server.address().port+'/preview/',{waitUntil:'networkidle'});
+    await page.waitForURL('**/research/hybrid-editor/');
+    assert(page.url().includes('/research/hybrid-editor/'),'Public /preview/ must open the actual editor');
     await page.locator('.step-cell[data-step="0"]').waitFor();
     assert.equal(await page.locator('.step-cell').count(),16,'Starts at native LEN=16');
     assert.equal(await page.locator('#step-mode').getAttribute('aria-pressed'),'true');
