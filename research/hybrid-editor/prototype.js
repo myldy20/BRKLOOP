@@ -42,6 +42,7 @@ const session=createResearchEditSession(seed);
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
+let soundPage='tone';
 function soundState(){return session.getState();}
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
 function status(message){$('status').textContent=message;}
@@ -312,67 +313,131 @@ function optionList(select,labels,value){
   });
   select.value=String(value);
 }
-function soundControl(container,descriptor,value,command,displayName){
-  if(!descriptor || descriptor.max<=descriptor.min || descriptor.label==='-')return;
+
+const soundLabels={
+  0:'Level',1:'Attack',2:'Decay',3:'Sustain',4:'Release',
+  5:'Filter offset',6:'Pitch offset',7:'Shape offset',8:'Preset trim',
+  9:'LFO rate',10:'Waveform',11:'Start phase',12:'Fade in',
+  13:'To pitch',14:'To filter',15:'To shape',16:'To amplitude',
+  17:'Arpeggiator',18:'Arp division',19:'Arp octaves',20:'Arp gate',
+  21:'Arp swing',22:'Probability',23:'Hold notes',24:'Note order',
+  25:'Root',26:'Scale',27:'Quantize',28:'Transpose',29:'Pattern length',
+  30:'Step division',31:'Step swing',32:'Step gate',
+  33:'Distortion',34:'Chorus',35:'Delay',36:'Reverb',37:'Voice mode',
+  38:'Glide',39:'Pan',40:'Mute',41:'Glide mode',42:'Voice priority',
+  43:'Voice allocation',44:'Detune',45:'Slicer',46:'Slice pattern',
+  47:'Slice rate',48:'Slice depth',49:'Chord',50:'Track filter',
+  51:'Strum timing',52:'Voice lead',53:'Insert type',
+  54:'Insert A',55:'Insert B',56:'Insert C',57:'Insert mix',
+  58:'Filter type',59:'Envelope sync',60:'LFO sync',
+  61:'LFO retrigger',62:'LFO polarity'
+};
+function soundControl(container,descriptor,value,command,displayName,paramId){
+  if(!descriptor||descriptor.max<=descriptor.min||descriptor.label==='-')return;
   const parent=newEl('label','sound-control');
-  const top=newEl('span','control-title'),name=newEl('span','',displayName||descriptor.label);
-  const out=newEl('output','',String(value));
-  top.append(name,out);parent.append(top);
+  if(Number.isInteger(paramId))parent.dataset.param=String(paramId);
+  const name=newEl('span','control-name',displayName||descriptor.label);
+  name.title=descriptor.label+' · SLOOP '+(Number.isInteger(paramId)?'param '+paramId:'macro');
+  parent.append(name);
   const values=descriptor.names||[];
-  const named=values.length>0 && values.length===descriptor.max-descriptor.min+1 && values.length<=128;
+  const named=values.length>0&&values.length===descriptor.max-descriptor.min+1&&values.length<=128;
   if(named){
     const select=newEl('select');
     optionList(select,values,value-descriptor.min);
-    out.textContent=values[value-descriptor.min]||String(value);
-    select.addEventListener('change',()=>command(descriptor.min+Number(select.value)));
+    select.setAttribute('aria-label',name.textContent);
+    select.addEventListener('change',()=>command(descriptor.min+Number(select.value),true));
     parent.append(select);
   }else{
     const range=newEl('input');
     range.type='range';range.min=String(descriptor.min);range.max=String(descriptor.max);
-    range.step='1';range.value=String(value);
-    range.addEventListener('input',()=>{out.textContent=range.value;});
-    range.addEventListener('change',()=>command(Number(range.value)));
-    parent.append(range);
+    range.step='1';range.value=String(value);range.setAttribute('aria-label',name.textContent);
+    const output=newEl('output','control-value',String(value));
+    range.addEventListener('input',()=>{output.textContent=range.value;command(Number(range.value),false);});
+    range.addEventListener('change',()=>command(Number(range.value),true));
+    parent.append(range,output);
   }
   container.append(parent);
 }
 function renderSound(){
   const {v,track}=current(),drums=v.track===3;
-  $('sound-title').textContent=drums?'Drum kit & effects':bank.engines[track.engine].name+' · '+(bank.engines[track.engine].presets[track.preset]?.name||'Custom');
+  const engine=drums?null:bank.engines[track.engine];
+  const preset=drums?(bank.kits[track.p[bank.pe0]]||'Kit'):(engine.presets[track.preset]?.name||'Custom');
+  $('sound-title').textContent=preset;
+  $('sound-subtitle').textContent=drums?'DRUMS · 16 LANES · '+bank.kits.length+' KITS':engine.name+' ENGINE · '+engine.presets.length+' FACTORY SOUNDS';
   $('engine-wrap').hidden=drums;$('preset-wrap').hidden=drums;$('kit-wrap').hidden=!drums;
-  $('sound-macros').replaceChildren();$('sound-shape').replaceChildren();$('sound-fx').replaceChildren();
-  $('sound-advanced-controls').replaceChildren();$('sound-global-controls').replaceChildren();
-  const writeParam=(id,value)=>commit({type:'setTrackParam',track:v.track,param:id,value});
-  const common=bank.trackControls;
-  if(!drums){
+  if(drums)optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
+  else{
     optionList($('engine-select'),bank.engines.map(x=>x.name),track.engine);
-    optionList($('preset-select'),bank.engines[track.engine].presets.map(x=>x.name),track.preset);
-    bank.engines[track.engine].controls.forEach((c,i)=>{
-      const index=bank.pe0+i;
-      soundControl($('sound-macros'),c,track.p[index],value=>writeParam(index,value),c.label);
-    });
-  }else{
-    optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
-    $('sound-macros').append(newEl('p','hint','16 SLOOP drum lanes · select a kit and play the pads below.'));
+    optionList($('preset-select'),engine.presets.map(x=>x.name),track.preset);
   }
-  const shape=drums?[0,39,50]:track.engine===9?[0,28,39,50]:[0,28,39,1,2,3,4,50];
-  for(const id of shape)soundControl($('sound-shape'),common[id],track.p[id],v=>writeParam(id,v));
-  if(track.engine===9 && !drums)
-    $('sound-shape').append(newEl('p','hint','FM6 envelopes are stored in its separate operator patch.'));
-  // Source-native LFO destinations and note transpose are part of factory presets.
-  $('sound-lfo').replaceChildren();
-  for(const id of [9,10,11,12,13,14,15,16,60,61,62])
-    soundControl($('sound-lfo'),common[id],track.p[id],value=>writeParam(id,value),
-      String(id).padStart(2,'0')+' / '+common[id].label);
-  for(const id of [34,35,36,53,54,55,56,57])
-    soundControl($('sound-fx'),common[id],track.p[id],v=>writeParam(id,v));
-  if($('all-params').open)for(const d of common)
-    soundControl($('sound-advanced-controls'),d,track.p[d.id],v=>writeParam(d.id,v),
-      String(d.id).padStart(2,'0')+' / '+d.label);
-  if($('all-globals').open)for(const d of bank.globalControls)
-    soundControl($('sound-global-controls'),d,current().state.g[d.id],v=>commit({type:'setGlobalParam',track:v.track,param:d.id,value:v}),
-      String(d.id).padStart(2,'0')+' / '+d.label);
-  $('param-count').textContent=String(bank.trackControls.length);
+  const available=drums?['tone','fx','mix','advanced']:['tone','envelope','lfo','fx','performance','mix','advanced'];
+  if(!available.includes(soundPage))soundPage='tone';
+  for(const button of $('sound-pages').querySelectorAll('button')){
+    const page=button.dataset.soundPage;
+    button.hidden=!available.includes(page);
+    button.setAttribute('aria-pressed',String(page===soundPage));
+  }
+  for(const page of $('sound-panel').querySelectorAll('.sound-page'))
+    page.hidden=page.dataset.page!==soundPage;
+  const common=bank.trackControls;
+  const writeParam=(id,value,final)=>{
+    if(final){
+      if(session.finishGesture()){player?.sync();render();}
+      else if(current().track.p[id]!==value)commit({type:'setTrackParam',track:v.track,param:id,value});
+    }else{
+      session.preview({type:'setTrackParam',track:v.track,param:id,value});
+      player?.trackParam(v.track,id,value);
+    }
+  };
+  const writeGlobal=(id,value,final)=>{
+    if(final){
+      if(session.finishGesture()){player?.sync();render();}
+      else if(current().state.g[id]!==value)commit({type:'setGlobalParam',track:v.track,param:id,value});
+    }else{
+      session.preview({type:'setGlobalParam',track:v.track,param:id,value});
+      player?.globalParam(id,value);
+    }
+  };
+  const showParams=(container,ids)=>{
+    const target=$(container);target.replaceChildren();
+    for(const id of ids)soundControl(target,common[id],track.p[id],
+      (value,final)=>writeParam(id,value,final),soundLabels[id]||common[id].label,id);
+  };
+  if(soundPage==='tone'){
+    $('sound-macros').replaceChildren();
+    if(drums)$('sound-macros').append(newEl('p','sound-help','Choose a kit above. Tap one of the 16 pads below to audition. Track effects and filtering live in FX.'));
+    else engine.controls.forEach((c,i)=>{
+      const id=bank.pe0+i;
+      soundControl($('sound-macros'),c,track.p[id],(value,final)=>writeParam(id,value,final),c.label,id);
+    });
+    $('sound-shape').closest('.sound-section').hidden=drums;
+    if(!drums)showParams('sound-shape',[28,5,6,7,50,58]);
+    else $('sound-shape').replaceChildren();
+  }else if(soundPage==='envelope'){
+    showParams('sound-envelope',[1,2,3,4,59]);
+    if(track.engine===9)$('sound-envelope').append(newEl('p','sound-help','FM6 has separate packed operator envelopes. These are the common track envelope controls.'));
+  }else if(soundPage==='lfo'){
+    showParams('sound-lfo',[9,10,11,12,13,14,15,16,60,61,62]);
+  }else if(soundPage==='fx'){
+    showParams('sound-fx',[33,34,35,36,50,53,54,55,56,57]);
+  }else if(soundPage==='performance'){
+    showParams('sound-performance',[17,18,19,20,21,22,23,24,25,26,27,29,30,31,32,37,38,41,42,43,44,45,46,47,48,49,51,52]);
+  }else if(soundPage==='mix'){
+    showParams('sound-mix',[0,39,40,50]);
+  }else if(soundPage==='advanced'){
+    const search=$('sound-search').value.trim().toLowerCase();
+    const matches=d=>!search||String(d.id).includes(search)||d.label.toLowerCase().includes(search)||
+      (soundLabels[d.id]||'').toLowerCase().includes(search);
+    $('sound-advanced-controls').replaceChildren();
+    $('sound-global-controls').replaceChildren();
+    if($('all-params').open)for(const d of common.filter(matches))
+      soundControl($('sound-advanced-controls'),d,track.p[d.id],
+        (value,final)=>writeParam(d.id,value,final),soundLabels[d.id]||d.label,d.id);
+    if($('all-globals').open)for(const d of bank.globalControls.filter(matches))
+      soundControl($('sound-global-controls'),d,current().state.g[d.id],
+        (value,final)=>writeGlobal(d.id,value,final),d.label,d.id);
+  }
+  $('param-count').textContent=String(common.length);
   $('global-count').textContent=String(bank.globalControls.length);
 }
 function selectWorkspace(tab){
@@ -410,6 +475,13 @@ function render(){
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+$('sound-pages').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-sound-page]');
+  if(!button||button.hidden)return;
+  soundPage=button.dataset.soundPage;renderSound();
+});
+$('sound-search').addEventListener('input',()=>{if(soundPage==='advanced')renderSound();});
+
 for(const [id,param] of [['bpm',0],['swing',1]]){
   $(id).addEventListener('change',e=>{
     const d=bank.globalControls[param];
@@ -442,8 +514,8 @@ $('preset-select').addEventListener('change',e=>{
 $('kit-select').addEventListener('change',e=>{
   const {v}=current();commit({type:'setTrackParam',track:v.track,param:bank.pe0,value:Number(e.target.value)});
 });
-$('all-params').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&$('all-params').open)renderSound();});
-$('all-globals').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&$('all-globals').open)renderSound();});
+$('all-params').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&soundPage==='advanced')renderSound();});
+$('all-globals').addEventListener('toggle',()=>{if(workspaceTab==='sound'&&soundPage==='advanced')renderSound();});
 $('length').addEventListener('change',e=>{
   const {v}=current(),length=clamp(Number(e.target.value)||16,1,64);
   if(commit({type:'setLength',track:v.track,length})){
