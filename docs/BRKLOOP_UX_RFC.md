@@ -1,6 +1,12 @@
 # BRKLOOP UX / sound capability RFC (discussion draft)
 
-**Status:** proposal for discussion; do not merge or implement before agreeing on core note-entry interactions.
+**Status:** design RFC, 2026-10-20. **Approved direction:** Step Write and Piano Roll are equal, one-tap-switchable editors sharing canonical SLOOP data. Still discussion-only for detailed gestures and browser-bridge fixes; do not merge or implement without review.
+
+Detailed specifications:
+- [Hybrid editor, phone/desktop interaction and data invariants](BRKLOOP_HYBRID_EDITOR_SPEC.md)
+- [SLOOP parameter inventory, browser-bridge gaps and validation gates](BRKLOOP_CAPABILITY_CONTRACT.md)
+
+These are design documents only: this RFC branch intentionally changes no shipping application files.
 
 ## 1. Product goal
 
@@ -20,19 +26,18 @@ Source of truth: `web/editor.html`, `SLOOP.md`, `web/preview.js`, `web/preview-w
 
 ## 3. UI interaction contract (proposed)
 
-### PATTERN: compose quickly
+### PATTERN: peer editor modes (product direction agreed)
 
-**Core mobile workflow (Step Write):**
-1. Tap empty step = insert **last played note/chord** and select it; tap existing step = **select** rather than accidentally delete. Dedicated erase action, long-press shortcut to clear.
-2. Play a pitch on the C-based onscreen keyboard while a step is selected = **write that pitch immediately**, audition it and optionally auto-advance the cursor. No separate SET STEP NOTE button.
-3. Toggle **CHORD** input to build a 1–4 note step from keyboard presses; a visible commit/done button completes the chord.
-4. Long press / Details opens a *compact bottom sheet* for velocity, gate/tie/rest, micro, fill, ratchet and locks. Inspectors do not permanently take half the screen.
-5. Optional alternate **PIANO ROLL** view for dense melodies/lengths; same underlying native SLOOP state, not another sequencing model. Drums retain 16-lane step matrix; velocity and ratchets visible.
-6. Always support 1–64 lengths and independent per-track division, with non-destructive shortening. Scroll sequential 16-step groups rather than paged navigation. No duplicated transport or clock.
+**Step Write + Piano Roll are peers**, visible as a one-tap STEP / ROLL control on both phone and desktop, retained per track; never hidden as an advanced option.
 
-**Desktop:** Same semantics with direct pointer selection, QWERTY input, shift-selection, hotkeys and a persistent context panel. One state model and no mobile-only feature loss.
+- STEP uses selecting steps and playing the onboard piano to immediately write/replace notes; optional auto-advance, explicit Erase, atomic 1–4-note chord composition. No mandatory note drop-down or Set Step Note action.
+- ROLL provides a scrollable time × pitch matrix with up to 4 notes **per native step**; respects NOTE/TIE/REST, per-note level/ratchet and 1–64 steps, without inventing arbitrary MIDI note length clips.
+- DRUM editor is lane-first in STEP and full 16-lane time grid in ROLL. Same per-hit expression and shared per-step nudge/fill.
+- Cursor, undo history, selection, playback state and musical data stay consistent and synchronized between modes. A switch is strictly a view operation.
+- Mobile gets a sticky audition keyboard and an on-demand step drawer; desktop a stable three-area layout and the same capabilities plus shortcuts.
+- Real-time record and free note drag/resize await explicit browser-bridge/undo acceptance criteria; no misleading UX placeholders.
 
-**Record** and **Undo/Redo:** Treat step entry, chords, timing, fills and parameter locks as undoable changes. Add realtime record only after stabilizing step-write UX. Browser audio playback/editing should remain responsive throughout.
+See the linked hybrid spec for exact tap semantics, chord commit, navigation and acceptance scripts.
 
 ### SOUND: progressive disclosure with full coverage
 
@@ -50,7 +55,7 @@ Desktop: left track strip, main pattern editor, right inspector/sound panel, low
 
 ## 4. Feature parity verification pipeline
 
-Build a machine-readable registry with: `scope/id/name/type/min/max/default/enum/unit/applicableEngines/browserDSPRoute/uiRoute/persistence/testStatus`.
+Build a machine-readable registry (63 common track, 47 global, eight edits per engine in current mock), with: `scope/id/name/type/min/max/default/enum/unit/applicableEngines/browserDSPRoute/uiRoute/persistence/testStatus`.
 
 Classify each original feature as:
 - A. Works in browser **and** has UI.
@@ -60,15 +65,15 @@ Classify each original feature as:
 
 Map 63 common track params, 8 per-engine params (12 engines), global/master params, 1–64 step fields, presets, samples, kit slots, banks and sections. Check round-trip serialization and runtime behavior before marking A.
 
-Automated gates: source descriptors match extracted registry; supported params never silently disappear; preset inventory reconciles 115 vs 153; 1/16/17/32/64 steps work; all four-note chords/ties/ratchets/locks/micro/fill survive export/import; mobile/desktop interaction tests and original native-vs-WASM DSP parity stay green.
+Automated gates: source descriptors match extracted registry; supported params never silently disappear; preset inventory investigates 115 extracted vs 153 documented; browser SF_CONT continuity is validated; 1/16/17/32/64 steps work; all four-note chords/ties/ratchets/locks/micro/fill survive export/import; mobile/desktop interaction tests and original native-vs-WASM DSP parity stay green.
 
 ## 5. Development sequence / exit criteria
 
-1. **Inventory first:** source-to-bridge-to-UI parameter map and preset discrepancy; no UI rewrite.
-2. **Note entry vertical slice:** implement and user-test Step Write, 1-note/chord input, auto-advance toggle and compact inspector with one track on Pixel.
+1. **Inventory first:** source-to-bridge-to-UI parameter map and preset discrepancy, and continuation-flag P0; no UI rewrite.
+2. **Hybrid editor vertical slice:** implement and user-test both STEP and ROLL as peers, selection/write/erase, 1-note/chord, auto-advance toggle and compact inspector on Pixel/desktop.
 3. **Sound coverage:** metadata-generated Advanced page for every supported SLOOP parameter, then polished quick pages by musical use.
 4. **Composition scope:** scenes/song, parameter-lock authoring and replay, user samples, MIDI/audio export as separately scoped vertical slices.
 
-No code changes in this RFC PR. Review and agree on the primary **Step Write vs Piano Roll** workflow before implementing.
+No code changes in this RFC PR. The equal STEP + ROLL direction is agreed; review the specific tap/draw/erase/chord gestures and audio-bridge constraints before implementation.
 
 **MVP acceptance scenario:** make a short bass riff, a chord progression and a drum rhythm on a phone, change preset/FX without stopping, save, reopen, and hear the same pattern without losing any stored native attributes.
