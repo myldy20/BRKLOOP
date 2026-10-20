@@ -26,8 +26,19 @@ for(let k=0;k<12;k++){
     assert.equal(migrated.document.state.tracks[0].preset,expectedIndex);
     assert.equal(candidate.engines[k].presets[expectedIndex].name,saved.name);
     const exactState=structuredClone(envelope.state);
-    exactState.tracks[0].preset=expectedIndex;
-    assert.deepEqual(migrated.document.state,exactState,'No synth parameters, FM6, drums, locks or steps may change');
+    // Migration touches every synth track, including untouched defaults on tracks 2/3.
+    // Verify each identity is remapped by original engine/name while all musical
+    // and patch state stays byte-for-byte identical.
+    for(let t=0;t<3;t++){
+      const oldTrack=exactState.tracks[t];
+      const originalName=old.engines[oldTrack.engine].presets[oldTrack.preset]?.name;
+      if(originalName){
+        const newIdx=candidate.engines[oldTrack.engine].presets.findIndex(p=>p.name===originalName);
+        assert(newIdx>=0);
+        oldTrack.preset=newIdx;
+      }
+    }
+    assert.deepEqual(migrated.document.state,exactState,'All three selection indices may change; no audio/step/lock fields may change');
     const second=migrateProjectEnvelope(migrated.document,old,candidate);
     assert.equal(second.migrated,false,'Idempotent migration: never remap native indices twice');
     assert.deepEqual(second.document,migrated.document);
