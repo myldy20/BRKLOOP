@@ -80,6 +80,7 @@ jobs:
         run: |
           node tools/build_native_bank_v2_candidate.mjs
           node tests/native_bank_v2_candidate_test.mjs
+          node tests/v2_project_migration_test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
