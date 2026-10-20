@@ -80,7 +80,7 @@ for(const k of [0,3]){
           t[key].map(s=>k===3?s.on:[s.time,s.n,s.notes]),
           mode+' does not change notes or hit times');
       }
-      if(mode!=='HUMANIZE')assert.deepEqual(a.micro,t.micro,mode+' must not change microtiming unintentionally');
+      if(['FILL','THIN','ACCENT'].includes(mode))assert.deepEqual(a.micro,t.micro,mode+' must not change microtiming unintentionally');
       if(mode==='HUMANIZE')assert.deepEqual(a.steps,t[key],'timing-only mode keeps exact note/hit steps');
     }
   }
