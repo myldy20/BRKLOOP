@@ -10,7 +10,7 @@ const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript
 const server=createServer(async(req,res)=>{
   try{
     const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
-    const path=resolve(root,'.'+(name==='/'?'/index.html':name));
+    const path=resolve(root,'.'+(name.endsWith('/')?name+'index.html':name));
     if(!(path===root||path.startsWith(root+sep)))throw Error('Invalid path');
     const b=await readFile(path);res.writeHead(200,{'content-type':types[extname(path)]||'application/octet-stream'});
     res.end(b);
