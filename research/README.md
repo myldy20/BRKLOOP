@@ -48,11 +48,28 @@ From this branch, with Node 22+:
  
     node tools/audit_brkloop_parity.mjs
     node tests/shared_edit_commands_test.mjs
+    # After build/host/native_factory_dump is compiled from research/native_factory_dump.c:
+    node tools/compare_native_factory.mjs
+    node tests/factory_preset_migration_test.mjs
     # After python tools/build_preview.py:
     clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src tests/preview_continuation_probe.c -o build/host/preview_continuation_probe
     build/host/preview_continuation_probe
 
 The first writes \`dist/audit/sloop-capabilities.json\` and \`dist/audit/summary.md\`. The GitHub Actions PR build uploads the report artifact and still runs native/WASM audio parity, browser interaction checks and the original build.
+
+
+## Native bank extraction and non-destructive V1 migration (CI run 39397795351)
+
+The compiled C exporter in research/native_factory_dump.c reads the actual original factory preset tables from each of the 12 compiled engines and applies the same pure preset-to-parameter rules as firmware/src/ui.c::apply_preset_to. Compare its 153 records against 115 mock-derived current entries with tools/compare_native_factory.mjs. Both source-state JSON and comparison reports are uploaded to the brkloop-native-factory-audit CI artifact. No manually invented sound parameters.
+
+**Important discoveries:**
+- Exactly 38 native preset names are absent from the mock bank.
+- **30 of 115 existing mock selections have different native indices** (misidentification risk during a naive catalog update).
+- All 115 shared names have at least one differing parameter in the native-generated snapshot. This includes source metadata differences such as the native level trim: do not blindly replace saved p arrays while migrating.
+- The experimental function in research/factory-preset-migration.mjs remaps by (engine ID, exact factory name) and deliberately preserves the saved p[], FM6 patch, notes, per-note ratchets, microtiming, fills and locks.
+- tests/factory_preset_migration_test.mjs exercises all 115 old choices and confirms zero changes to the underlying project except the preset identity index.
+
+**Production follow-up only after review:** assign a versioned bank identity (V2), ship a deterministic V1-name→V2-native-index mapping with the app, migrate only the metadata of legacy projects, ensure loading audio stays bit-compatible before and after upgrade, preserve FM6 packed patch state, then expose all 153 true native factory sounds. Qualify each selected engine/patch audibly before publishing. The research exporter does not replace dist/bank.json today.
 
 ## Next slices
 
