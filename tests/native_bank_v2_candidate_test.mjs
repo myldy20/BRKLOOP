@@ -26,10 +26,10 @@ function stateFor(engine,preset,presetIndex){
   state.sel=0;state.solo=0;
   return state;
 }
-function audition(state,frames=6144){
+function audition(state,frames=6144,note=60){
   const dsp=new FirmwareAudio(wasm);
   dsp.sync(state);
-  dsp.w.preview_note(0,60,1);
+  dsp.w.preview_note(0,note,1);
   const left=new Float32Array(frames),right=new Float32Array(frames);
   dsp.render(left,right);
   const signal=new Float32Array(frames*2);
@@ -42,7 +42,7 @@ function audition(state,frames=6144){
     energy+=Math.abs(l)+Math.abs(r);
     maxAbs=Math.max(maxAbs,Math.abs(l),Math.abs(r));
   }
-  dsp.w.preview_note(0,60,0);
+  dsp.w.preview_note(0,note,0);
   return {signal,energy,maxAbs};
 }
 function nativeCatalog(){
@@ -58,9 +58,19 @@ for(let k=0;k<12;k++){
   let minEnergy=Infinity,maxEnergy=0;
   for(let i=0;i<n.presets.length;i++){
     const preset=n.presets[i];
-    const res=audition(stateFor(k,preset,i));
+    const cfg=stateFor(k,preset,i);
+    let res=audition(cfg);
+    let audibleNote=60;
+    // Some SAMPLE sounds are GM drum maps. MIDI C4 does not necessarily point
+    // at a populated zone: qualify at least one factory-defined playable key.
+    if(res.energy<0.01)for(const note of [36,38,42,46,48,51,57,72]){
+      const attempt=audition(cfg,6144,note);
+      if(attempt.energy>res.energy){res=attempt;audibleNote=note;}
+      if(res.energy>=0.01)break;
+    }
     if(res.energy<0.01)results.silent.push({engine:n.name,index:i,name:preset.name,energy:res.energy});
     else if(res.energy<0.5)results.weak.push({engine:n.name,index:i,name:preset.name,energy:res.energy});
+    if(audibleNote!==60)console.log('Non-C4 sample-key qualification:',n.name,preset.name,'note',audibleNote,'energy',res.energy.toFixed(2));
     minEnergy=Math.min(minEnergy,res.energy);maxEnergy=Math.max(maxEnergy,res.energy);
     results.maxAbs=Math.max(results.maxAbs,res.maxAbs);
     results.checkedNative++;
