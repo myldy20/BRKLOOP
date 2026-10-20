@@ -57,6 +57,8 @@ export class LocalPreview {
   sync(includeSamples = false) {
     if (this.node) this.node.port.postMessage({ type: 'state', state: this.getState(includeSamples) });
   }
+  trackParam(track,id,value) { this.node?.port.postMessage({type:'track-param',track,id,value}); }
+  globalParam(id,value) { this.node?.port.postMessage({type:'global-param',id,value}); }
   play(on) { this.node?.port.postMessage({ type: 'play', on }); }
   note(track, note, on) { this.node?.port.postMessage({ type: 'note', track, note, on }); }
   hit(kit, lane, velocity) { this.node?.port.postMessage({ type: 'hit', kit, lane, velocity }); }

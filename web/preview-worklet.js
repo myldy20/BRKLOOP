@@ -55,6 +55,19 @@ export class FirmwareAudio {
     state.kits?.forEach((kit, k) => { this.write(kit); this.w.preview_kit(k); });
     this.previous = state;
   }
+  // Low-latency control path: apply immediately on audio thread, without
+  // serializing 64 steps x 4 tracks or waiting for another pattern cycle.
+  setTrackParam(track,id,value) {
+    if (!Number.isInteger(track) || track < 0 || track > 3 || !Number.isInteger(id) || id < 0 || id >= 71 ||
+        !Number.isInteger(value)) throw Error('Invalid live SLOOP track parameter');
+    this.w.preview_param(track,id,value);
+    if (this.previous?.tracks?.[track]) this.previous.tracks[track].p[id]=value;
+  }
+  setGlobalParam(id,value) {
+    if (!Number.isInteger(id) || id < 0 || id >= 49 || !Number.isInteger(value)) throw Error('Invalid live SLOOP global parameter');
+    this.w.preview_global(id,value);
+    if (this.previous?.g) this.previous.g[id]=value;
+  }
   render(left, right) {
     for (let i = 0; i < left.length; i++) {
       if (this.position >= this.frames) { this.w.preview_render(); this.position = 0; }
@@ -76,6 +89,8 @@ if (typeof registerProcessor === 'function') {
       this.port.onmessage = ({ data }) => {
         try {
           if (data.type === 'state') this.dsp.sync(data.state);
+          else if (data.type === 'track-param') this.dsp.setTrackParam(data.track,data.id,data.value);
+          else if (data.type === 'global-param') this.dsp.setGlobalParam(data.id,data.value);
           else if (data.type === 'note') this.dsp.w.preview_note(data.track, data.note, data.on ? 1 : 0);
           else if (data.type === 'play') this.dsp.w.preview_play(data.on ? 1 : 0);
           else if (data.type === 'panic') this.dsp.w.preview_panic();

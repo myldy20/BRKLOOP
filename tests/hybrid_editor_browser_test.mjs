@@ -118,55 +118,94 @@ try{
     await page.locator('#step-mode').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-drums.png',fullPage:true});
-    // SOUND: native metadata-driven factory sound and controls on the same track.
+    // SOUND uses a focused synth workflow and keeps complete source metadata in ALL.
     await page.locator('#tracks button').first().click();
     await page.locator('#sound-tab').click();
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
     assert.equal(await page.locator('#engine-select option').count(),12);
     assert.equal(await page.locator('#preset-select option').count()>=3,true);
-    // Native WOBBLE must expose the exact LFO/tuning state absent from old mock.
-    const lfo=await page.locator('#sound-lfo .sound-control').count();
-    assert(lfo>=10,'Expose native SLOOP LFO controls in grouped Sound section');
-    const initialPitch=await page.locator('#sound-shape .sound-control').filter({hasText:'TRN'}).locator('input').inputValue();
-    assert.equal(initialPitch,'-24','Firmware WOBBLE transpose is -24');
-    const lfoFilter=await page.locator('#sound-lfo .sound-control').filter({hasText:'14 / FLT'}).locator('input').inputValue();
-    assert.equal(lfoFilter,'40','Firmware WOBBLE LFO FILTER depth is 40');
-    await page.locator('#engine-select').selectOption('1');
-    assert.equal(await page.locator('#engine-select').inputValue(),'1');
-    await page.locator('#preset-select').selectOption('1');
-    assert.equal(await page.locator('#preset-select').inputValue(),'1');
-    assert.equal(await page.locator('#sound-macros .sound-control').count()>1,true);
-    assert.equal(await page.locator('#sound-shape .sound-control').count()>1,true);
-    assert.equal(await page.locator('#sound-fx .sound-control').count()>1,true);
-    // Change a live DSP slider/enum and verify Undo applies in Sound too.
-    const firstRange=page.locator('#sound-macros input[type=range]').first();
-    if(await firstRange.count()){
-      const original=await firstRange.inputValue();
-      const max=Number(await firstRange.getAttribute('max'));
-      const min=Number(await firstRange.getAttribute('min'));
-      const wanted=String(Number(original)===max?min:max);
-      await firstRange.fill(wanted);
-      await firstRange.dispatchEvent('change');
-      assert.equal(await page.locator('#sound-macros input[type=range]').first().inputValue(),wanted);
-      await page.locator('#undo').click();
-      assert.equal(await page.locator('#sound-macros input[type=range]').first().inputValue(),original);
-    }
+    assert.equal(await page.locator('#sound-macros .sound-control').count(),8,'Eight original synth controls in TONE');
+    assert.equal(await page.locator('#sound-shape .sound-control[data-param="28"] input').inputValue(),'-24',
+      'Native WOBBLE transpose must be exposed in TONE');
+    await page.locator('#sound-pages button[data-sound-page="lfo"]').click();
+    assert.equal(await page.locator('#sound-lfo .sound-control').count(),11,'Complete native LFO controls');
+    assert.equal(await page.locator('#sound-lfo .sound-control[data-param="14"] input').inputValue(),'40',
+      'Native WOBBLE LFO-to-filter depth retained');
+    assert.equal(await page.locator('#sound-macros').isVisible(),false,'Inactive pages not a long scroll');
+
+    // Instrument only the real AudioWorklet boundary: a slider input without
+    // mouseup/change MUST emit a live param command before the gesture ends.
+    await page.evaluate(async()=>{
+      const {LocalPreview}=await import('/web/preview.js');
+      const original=LocalPreview.prototype.trackParam;
+      window.liveParamMessages=[];
+      LocalPreview.prototype.trackParam=function(...args){
+        window.liveParamMessages.push(args);
+        return original.apply(this,args);
+      };
+    });
+    await page.locator('#play').click();
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING / SLOOP WASM'),
+      {timeout:15000});
+    const nativeFilter=page.locator('#sound-lfo .sound-control[data-param="14"] input');
+    await page.evaluate(()=>{
+      const range=document.querySelector('#sound-lfo .sound-control[data-param="14"] input');
+      window.draggedFilterNode=range;
+      range.value='54';range.dispatchEvent(new Event('input',{bubbles:true}));
+      range.value='61';range.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    const live=await page.evaluate(()=>({
+      moves:window.liveParamMessages,
+      connected:window.draggedFilterNode.isConnected,
+      current:window.draggedFilterNode.value
+    }));
+    assert.deepEqual(live.moves.map(x=>x.slice(0,2)),[[0,14],[0,14]],'Live updates reach audio on every input');
+    assert.equal(live.moves.at(-1)[2],61);
+    assert.equal(live.connected,true,'Dragging must NOT rebuild/replace the control node');
+    assert.equal(live.current,'61');
+    await nativeFilter.dispatchEvent('change');
+    assert.equal(await nativeFilter.inputValue(),'61');
+    await page.locator('#undo').click();
+    assert.equal(await nativeFilter.inputValue(),'40','Whole drag reverts in one Undo');
+    await page.locator('#redo').click();
+    assert.equal(await nativeFilter.inputValue(),'61','Redo restores final live setting');
+
+    await page.locator('#sound-pages button[data-sound-page="envelope"]').click();
+    assert.equal(await page.locator('#sound-envelope .sound-control').count(),5);
+    await page.locator('#sound-pages button[data-sound-page="fx"]').click();
+    assert.equal(await page.locator('#sound-fx .sound-control').count(),10);
+    await page.locator('#sound-pages button[data-sound-page="performance"]').click();
+    assert.equal(await page.locator('#sound-performance .sound-control').count()>15,true);
+    await page.locator('#sound-pages button[data-sound-page="mix"]').click();
+    assert.equal(await page.locator('#sound-mix .sound-control').count(),4);
+    await page.locator('#sound-pages button[data-sound-page="advanced"]').click();
     await page.locator('#all-params summary').click();
     assert.equal(await page.locator('#param-count').textContent(),'63');
     await page.waitForFunction(()=>document.querySelectorAll('#sound-advanced-controls .sound-control').length>20,
       {timeout:10000});
-    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()>20,true);
+    await page.locator('#sound-search').fill('filter');
+    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()>=1,true);
+    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()<20,true,'Search narrows source controls');
+    await page.locator('#sound-search').fill('');
     await page.locator('#all-globals summary').click();
     assert.equal(await page.locator('#global-count').textContent(),'49');
     await page.waitForFunction(()=>document.querySelectorAll('#sound-global-controls .sound-control').length>10,
       {timeout:10000});
-    assert.equal(await page.locator('#sound-global-controls .sound-control').count()>10,true);
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-sound.png',fullPage:true});
+
+    // Synth controls must not bleed into the drum kit editor.
+    await page.locator('#tracks button').last().click();
+    assert.equal(await page.locator('#sound-pages button[data-sound-page="lfo"]').isVisible(),false);
+    assert.equal(await page.locator('#sound-pages button[data-sound-page="envelope"]').isVisible(),false);
+    assert.equal(await page.locator('#kit-select').isVisible(),true);
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-kit.png',fullPage:true});
+    await page.locator('#tracks button').first().click();
+    await page.locator('#engine-select').selectOption('1');
+    assert.equal(await page.locator('#engine-select').inputValue(),'1');
+    await page.locator('#preset-select').selectOption('1');
+    assert.equal(await page.locator('#preset-select').inputValue(),'1');
     // One real browser audio start/stop smoke check; audio doesn't use a second oscillator.
-    await page.locator('#play').click();
-    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING / SLOOP WASM'),
-      {timeout:15000});
     await page.locator('#stop').click();
     assert.equal(await page.locator('#status').textContent(),'STOPPED');
     await page.locator('#pattern-tab').click();

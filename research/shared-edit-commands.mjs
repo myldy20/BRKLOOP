@@ -114,21 +114,37 @@ function apply(data,cmd){
 }
 export function createResearchEditSession(initial,{historyLimit=64}={}){
   integer(historyLimit,1,128,'historyLimit');
-  let current=copy(initial),undo=[],redo=[];
+  let current=copy(initial),undo=[],redo=[],gesture=null;
+  // A continuous knob turn is one Undo transaction. Drag updates change the
+  // canonical state immediately without repeatedly cloning the full pattern.
+  const finishGesture=()=>{
+    if(!gesture)return false;
+    const before=gesture;gesture=null;
+    if(JSON.stringify(before)===JSON.stringify(current))return false;
+    undo.push(before);if(undo.length>historyLimit)undo.shift();redo=[];return true;
+  };
   const view={track:0,step:0,mode:'step'};
   return Object.freeze({
     getState:()=>copy(current),
     getView:()=>({...view}),
     select(track,step){const t=trackAt(current,track);stepAt(t,step);view.track=track;view.step=step;return {...view};},
     setMode(mode){if(mode!=='step'&&mode!=='roll')throw Error('Mode must be step or roll');view.mode=mode;return {...view};},
+    preview(cmd){
+      if(cmd.type!=='setTrackParam'&&cmd.type!=='setGlobalParam')throw Error('Continuous preview is for DSP parameters');
+      if(!gesture)gesture=copy(current);
+      apply(current,cmd);
+      return true;
+    },
+    finishGesture,
     dispatch(cmd){
+      finishGesture();
       const next=copy(current);apply(next,cmd);
       if(JSON.stringify(current)===JSON.stringify(next))return false;
       undo.push(current);if(undo.length>historyLimit)undo.shift();
       current=next;redo=[];return true;
     },
-    undo(){if(!undo.length)return false;redo.push(current);current=undo.pop();return true;},
-    redo(){if(!redo.length)return false;undo.push(current);current=redo.pop();return true;},
+    undo(){finishGesture();if(!undo.length)return false;redo.push(current);current=undo.pop();return true;},
+    redo(){finishGesture();if(!redo.length)return false;undo.push(current);current=redo.pop();return true;},
     history:()=>({undo:undo.length,redo:redo.length})
   });
 }
