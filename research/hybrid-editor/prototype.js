@@ -4,6 +4,7 @@ import {createResearchEditSession} from '../shared-edit-commands.mjs';
 import {LocalPreview} from '../../web/preview.js';
 import {panelAuditionPitch} from './panel-pitch.mjs';
 import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
+import {generateMelodicIdea,melodicIdeaSummary} from '../melodic-ideas.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -40,7 +41,7 @@ for(let k=0;k<seed.tracks.length;k++){
   }
 }
 const session=createResearchEditSession(seed);
-let grooveDraft=null,grooveSeed=1;
+let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -52,6 +53,9 @@ function soundState(){
   if(grooveDraft)state.tracks[3].dstep=grooveDraft.steps.map(s=>({
     on:s.on,lvl:[...s.lvl],rat:[...s.rat]
   }));
+  if(melodyDraft)state.tracks[melodyDraft.track].step=melodyDraft.steps.map(s=>({
+    ...s,notes:[...s.notes]
+  }));
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
@@ -59,7 +63,7 @@ function status(message){$('status').textContent=message;}
 function commit(cmd){
   try{
     const edited=session.dispatch(cmd);
-    if(edited){grooveDraft=null;player?.sync();}
+    if(edited){grooveDraft=null;melodyDraft=null;player?.sync();}
     render();
     return edited;
   }catch(e){status(e.message);render();return false;}
@@ -185,7 +189,7 @@ function renderTracks(){
     b.append(newEl('small','',String(k+1).padStart(2,'0')),newEl('strong','',name));
     b.append(newEl('span','',k===3?(bank.kits[session.getState().tracks[3].p[bank.pe0]]||'16 lanes'):(bank.engines[session.getState().tracks[k].engine]?.presets[session.getState().tracks[k].preset]?.name||'CUSTOM')));
     b.addEventListener('click',()=>{
-      if(k!==v.track&&grooveDraft){grooveDraft=null;player?.sync();}
+      if(k!==v.track&&(grooveDraft||melodyDraft)){grooveDraft=null;melodyDraft=null;player?.sync();}
       session.select(k,Math.min(v.step,clamp(session.getState().tracks[k].p[29],1,64)-1));
       session.setMode(modeForTrack[k]);chord=false;chordNotes=[];render();
     });
@@ -492,9 +496,59 @@ function previewGroove(next){
   player?.sync();render();
   status('PREVIEW '+grooveDraft.style+' / #'+grooveDraft.seed+' · Apply to save, Cancel to restore');
 }
+function renderMelody(){
+  const {v,track}=current(),panel=$('melody-panel');
+  panel.hidden=v.track===3||workspaceTab!=='pattern';
+  if(panel.hidden)return;
+  const length=clamp(track.p[29],1,64);
+  const draft=melodyDraft&&melodyDraft.track===v.track?melodyDraft:null;
+  const steps=draft?.steps||track.step;
+  const count=melodicIdeaSummary(draft||{steps,events:steps.slice(0,length)
+    .map((s,i)=>({step:i,notes:s.notes.slice(0,s.n)}))
+    .filter(e=>steps[e.step].time===0&&e.notes.length),length});
+  $('melody-apply').disabled=!draft;
+  $('melody-cancel').disabled=!draft;
+  $('melody-length-hint').textContent='LEN '+length+' · '+Math.ceil(length/16)+' BAR'+(length>16?'S':'');
+  $('melody-meta').textContent=draft?
+    'DRAFT #'+draft.seed+' · '+count.attacks+' attacks / '+count.notes+' notes · unchanged until Apply':
+    'CURRENT PART · '+count.attacks+' attacks · '+(length<64?'Set LEN 64 for all 4 chords':'Four chord bars available');
+  const visual=$('melody-visual');visual.replaceChildren();
+  for(let base=0;base<length;base+=16){
+    const row=newEl('div','melody-mini-row');
+    const last=Math.min(base+16,length);
+    row.style.gridTemplateColumns='43px repeat('+(last-base)+',minmax(16px,1fr))';
+    row.append(newEl('span','groove-row-name',String(base+1).padStart(2,'0')+'–'+String(last).padStart(2,'0')));
+    for(let i=base;i<last;i++){
+      const step=steps[i],active=step.time===0&&step.n>0;
+      const names=active?step.notes.slice(0,step.n).map(noteName).join(' + '):'Rest';
+      const dot=newEl('span','melody-mini-cell'+(active?' on':'')+(i%4===0?' beat':''),
+        active?String(step.n>1?'▦':'●'):'·');
+      dot.title='Step '+(i+1)+': '+names;
+      dot.dataset.step=String(i);
+      dot.setAttribute('aria-label','Step '+(i+1)+': '+names);
+      row.append(dot);
+    }
+    visual.append(row);
+  }
+}
+function cancelMelody(){
+  if(melodyDraft){melodyDraft=null;player?.sync();}
+  render();status('MELODIC PREVIEW CANCELLED · original synth notes retained');
+}
+function previewMelody(next){
+  const {v,track}=current();if(v.track===3)return;
+  if(next)melodySeed=(melodySeed+1)>>>0;
+  const idea=generateMelodicIdea({length:track.p[29],role:$('melody-role').value,
+    rhythm:$('melody-rhythm').value,scale:$('melody-scale').value,
+    progression:$('melody-progression').value,root:Number($('melody-root').value),
+    seed:melodySeed});
+  melodyDraft={...idea,track:v.track};grooveDraft=null;
+  player?.sync();render();
+  status('PREVIEW '+idea.role+' / '+idea.scale+' / #'+idea.seed+' · Apply to save');
+}
 function selectWorkspace(tab){
   if(tab!=='pattern'&&tab!=='sound')return;
-  if(tab!=='pattern'&&grooveDraft){grooveDraft=null;player?.sync();}
+  if(tab!=='pattern'&&(grooveDraft||melodyDraft)){grooveDraft=null;melodyDraft=null;player?.sync();}
   workspaceTab=tab;
   // A keyboard in Sound is an audition tool; a hidden keyboard in Roll frees
   // vertical screen space so musicians never scroll back to Draw/Erase.
@@ -518,6 +572,7 @@ function render(){
     if(v.mode==='step')renderStep();else renderRoll();
     renderInspector();
     renderGroove();
+    renderMelody();
   }
   $('bpm').value=String(current().state.g[0]);
   $('swing').value=String(current().state.g[1]);
@@ -554,6 +609,17 @@ $('groove-apply').addEventListener('click',()=>{
 });
 $('groove-cancel').addEventListener('click',()=>cancelGroove());
 $('groove-style').addEventListener('change',()=>cancelGroove());
+$('melody-preview').addEventListener('click',()=>previewMelody(false));
+$('melody-next').addEventListener('click',()=>previewMelody(true));
+$('melody-apply').addEventListener('click',()=>{
+  if(!melodyDraft||current().v.track!==melodyDraft.track)return;
+  const draft=melodyDraft;
+  if(commit({type:'replaceMelodicIdea',track:draft.track,length:draft.length,steps:draft.steps}))
+    status('APPLIED '+draft.role+' / seed '+draft.seed+' · one Undo step');
+});
+$('melody-cancel').addEventListener('click',()=>cancelMelody());
+for(const id of ['melody-role','melody-root','melody-scale','melody-progression','melody-rhythm'])
+  $(id).addEventListener('change',()=>cancelMelody());
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
 $('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
 $('toggle-keyboard').addEventListener('click',()=>{keyboardVisible=!keyboardVisible;render();});
@@ -590,8 +656,8 @@ $('length').addEventListener('change',e=>{
 });
 $('division').addEventListener('change',e=>commit({type:'setDivision',track:current().v.track,division:Number(e.target.value)}));
 $('auto').addEventListener('change',e=>{auto=e.target.checked;render();});
-$('undo').addEventListener('click',()=>{grooveDraft=null;session.undo();render();player?.sync();});
-$('redo').addEventListener('click',()=>{grooveDraft=null;session.redo();render();player?.sync();});
+$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;session.undo();render();player?.sync();});
+$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;session.redo();render();player?.sync();});
 $('clear').addEventListener('click',eraseSelected);
 $('rest').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:2});});
 $('tie').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:1});});

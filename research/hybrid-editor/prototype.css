@@ -263,3 +263,40 @@ header h1{color:#fbfbff;letter-spacing:-.06em;}
 @media(prefers-reduced-motion:reduce){
   button,.groove-mini-cell{transition:none!important;animation:none!important;}
 }
+
+/* Melodic ideas: compact SLOOP Live-style step overview, phone and desktop. */
+.melody-panel{margin:6px 0 14px;padding:14px;background:#0c0d13;border:1px solid #343542;
+  border-radius:11px;box-shadow:inset 0 1px 0 #ffffff0a;}
+.melody-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;}
+.melody-top strong{display:block;font-size:20px;line-height:1.15;margin:5px 0;}
+.melody-top p{font-size:11px;line-height:1.5;color:var(--muted);margin:4px 0 0;}
+.melody-length-hint{font:10px/1.6 ui-monospace,Menlo,monospace;border-radius:6px;
+  padding:5px 8px;white-space:nowrap;background:#172436;border:1px solid #325074;color:#b9d8ff;}
+.melody-controls{display:grid;grid-template-columns:1fr .7fr .85fr 1.35fr 1.1fr;gap:7px;margin:13px 0 3px;}
+.melody-controls label{display:grid;gap:5px;min-width:0;color:#acb6c5;letter-spacing:.04em;
+  font:bold 10px/1.35 ui-monospace,Menlo,Consolas,monospace;}
+.melody-controls select{width:100%;min-width:0;height:39px;border-radius:6px;
+  padding:5px 7px;font-size:12px;color:#f2f5ff;}
+#melody-preview,#melody-next{border-color:#44629a;}
+#melody-apply:not(:disabled){background:#255632;border-color:#3bbb76;
+  box-shadow:var(--key-shadow),0 0 16px -5px #1ecc70;}
+.melody-visual{display:grid;gap:5px;overflow-x:auto;padding:10px;border:1px solid #282c38;
+  border-radius:8px;background:var(--glass);}
+.melody-mini-row{display:grid;gap:4px;align-items:center;}
+.melody-mini-cell{min-width:0;height:27px;display:grid;place-items:center;border-radius:4px;
+  background:#1d202c;box-shadow:inset 0 1px 0 #ffffff09;
+  font:12px/1 ui-monospace,Menlo,monospace;color:#646d81;}
+.melody-mini-cell.beat{background:#282d3b;}
+.melody-mini-cell.on{background:var(--accent);color:#030407;font-weight:900;
+  box-shadow:0 0 11px -3px var(--accent),inset 0 1px 0 #ffffff55;}
+@media(max-width:750px){
+  .melody-controls{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .melody-top strong{font-size:17px;}
+  .melody-panel{padding:10px;}
+  .melody-mini-cell{height:24px;}
+}
+@media(max-width:390px){
+  .melody-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .melody-length-hint{font-size:9px;padding:4px 5px;}
+  .melody-mini-cell{height:22px;min-width:12px;}
+}

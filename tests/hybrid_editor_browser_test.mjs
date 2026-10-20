@@ -98,6 +98,42 @@ try{
 
     await page.locator('#length').fill('64');await page.locator('#length').press('Tab');
     assert.equal(await page.locator('.step-cell').count(),64);
+    // Musical starters use the genuine native SLOOP score and existing Undo.
+    assert.equal(await page.locator('#melody-panel').isVisible(),true);
+    assert.equal(await page.locator('#melody-apply').isDisabled(),true);
+    await page.locator('#melody-role').selectOption('CHORD');
+    await page.locator('#melody-root').selectOption('9');
+    await page.locator('#melody-scale').selectOption('MINOR');
+    await page.locator('#melody-progression').selectOption('MINOR');
+    await page.locator('#melody-rhythm').selectOption('SPARSE');
+    await page.locator('#melody-preview').click();
+    assert.equal(await page.locator('#melody-apply').isEnabled(),true);
+    assert.equal(await page.locator('#melody-meta').textContent().then(s=>s.includes('DRAFT #1')),true);
+    assert.equal(await page.locator('.melody-mini-cell[data-step="0"]').getAttribute('aria-label'),
+      'Step 1: A4 + C5 + E5','A-minor chord is diatonic and uses 3 native MIDI notes');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
+      'Melodic preview must leave editable notes intact');
+    await page.locator('#melody-next').click();
+    assert.equal(await page.locator('#melody-meta').textContent().then(s=>s.includes('DRAFT #2')),true);
+    await page.locator('#melody-cancel').click();
+    assert.equal(await page.locator('#melody-apply').isDisabled(),true);
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3');
+    await page.locator('#melody-preview').click();
+    await page.locator('#melody-apply').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'A4 + C5 + E5',
+      'APPLY materializes native chord in original step editor');
+    assert.match(await page.locator('.step-cell[data-step="16"] .pitch').textContent(),
+      /^(F4 \+ A4 \+ C5|A4 \+ C5 \+ F5)$/,
+      'Full LEN 64 uses second chord in its own bar (root or open inversion)');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
+      'One Undo restores the whole previous synth pattern');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'A4 + C5 + E5');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3');
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-melody.png',fullPage:true});
+
     await page.locator('.step-cell[data-step="63"]').click();
     assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'B3',
       'STEP places latest selected pitch without entering Draw');
