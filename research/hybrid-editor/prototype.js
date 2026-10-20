@@ -20,7 +20,14 @@ const bank=await fetch('../../bank.json').then(r=>{
   return r.json();
 });
 if(bank.format!=='BRKLOOP_BANK_V1')throw Error('Expected SLOOP V1 baseline');
-const session=createResearchEditSession(bank.baseline);
+// Prototype starts with a blank score (factory sounds remain unchanged).
+const seed=structuredClone(bank.baseline);
+for(const t of seed.tracks){
+  t.step?.forEach(s=>{s.n=0;s.time=2;s.flags=0;s.notes=[0,0,0,0];});
+  t.dstep?.forEach(s=>{s.on=0;s.lvl.fill(0);s.rat.fill(0);});
+  t.micro.fill(0);t.fill.fill(0);t.locks=[];
+}
+const session=createResearchEditSession(seed);
 const modeForTrack=['step','step','step','step'];
 let tool='select',octave=3,selectedPitch=60,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 function soundState(){return session.getState();}
