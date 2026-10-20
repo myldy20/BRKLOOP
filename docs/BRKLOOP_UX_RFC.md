@@ -5,6 +5,8 @@
 Detailed specifications:
 - [Hybrid editor, phone/desktop interaction and data invariants](BRKLOOP_HYBRID_EDITOR_SPEC.md)
 - [SLOOP parameter inventory, browser-bridge gaps and validation gates](BRKLOOP_CAPABILITY_CONTRACT.md)
+- [Phone/desktop layout for both equal editors](BRKLOOP_LAYOUT_RFC.md)
+- [BRKTRK reuse candidates, maturity and future integration boundaries](BRKLOOP_BRKTRK_REUSE_RFC.md)
 
 These are design documents only: this RFC branch intentionally changes no shipping application files.
 
