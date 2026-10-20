@@ -38,7 +38,7 @@ for(let k=0;k<12;k++){
     if(k===9&&!selected)throw Error('FM6 native patch has no packed state: '+p.name);
     const fm6=k===9?selected.fm6:legacy.baseline.tracks[0].fm6;
     assert(Array.isArray(fm6)&&fm6.length===legacy.baseline.tracks[0].fm6.length,'Invalid FM6 patch bytes');
-    return {name:p.name,p:Array.from(p.p),fm6:Array.from(fm6)};
+    return {index:i,name:p.name,p:Array.from(p.p),fm6:Array.from(fm6)};
   });
   engines.push({name:source.name,controls:old.controls,presets});
   legacyIndexMap.push({engine:k,name:source.name,indexToNative:indexMap});
