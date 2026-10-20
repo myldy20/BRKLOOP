@@ -48,17 +48,22 @@ try {
     for(let j=0;j<8;j++)params.push(normal(E.parse[E.CMD.DESC](await request(E.req.desc(0,info.pe0+j)))));
     const originals=byEngine[engine];
     if(originals.some(x=>!x))throw Error('Sparse native preset trim map in engine '+engine);
-    const missing=originals.map((name,index)=>({index,name})).filter(x=>x.index>=names.length || names[x.index]!==x.name);
+    const missing=originals.map((name,index)=>({index,name})).filter(x=>!names.includes(x.name));
+    const reordered=originals.map((name,index)=>({index,name,mockIndex:names.indexOf(name)}))
+      .filter(x=>x.mockIndex>=0&&x.mockIndex!==x.index);
     report.engine.push({id:engine,name:info.engines[engine],params,nativePresetNames:originals,mockPresetNames:names,
-      countNative:originals.length,countMock:names.length,countMissing:originals.length-names.length,nameMismatches:missing});
+      countNative:originals.length,countMock:names.length,countMissing:originals.length-names.length,notInMockByName:missing,reordered});
     report.factory.nativeCount+=originals.length;report.factory.mockCount+=names.length;
     report.factory.missing.push(...missing.map(x=>({...x,engine,engineName:info.engines[engine]})));
   }
+  assert.equal(info.pe0,63,'Native SLOOP common parameter baseline changed; update inventory');
+  assert.equal(info.gcount,49,'Global SLOOP descriptor count changed; update inventory');
   assert.equal(report.commonTrack.length,info.pe0);
   assert.equal(report.global.length,info.gcount);
   assert.equal(report.engine.length,12);
   assert.equal(report.engine.flatMap(x=>x.params).length,96);
-  assert.equal(report.factory.nativeCount,153,'native factory preset inventory changed');
+  assert.equal(report.factory.nativeCount,153,'Native factory preset inventory changed');
+  assert(report.factory.mockCount>=115,'Mock factory catalog regressed below audited 115 names');
   if(report.factory.mockCount>report.factory.nativeCount)throw Error('Mock contains more presets than native factory inventory');
   const currentWorklet=readFileSync('web/preview-worklet.js','utf8');
   const currentHost=readFileSync('firmware/host/preview.c','utf8');
