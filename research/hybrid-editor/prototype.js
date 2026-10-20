@@ -15,17 +15,27 @@ const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const trackNames=['SYNTH 1','SYNTH 2','SYNTH 3','DRUMS'];
 const laneNames=['KICK','KICK 2','SNARE','CLAP','HAT','OPEN HAT','PEDAL','RIM',
   'SNARE 2','LOW TOM','HI TOM','CRASH','RIDE','SHAKER','CONGA','COWBELL'];
-const bank=await fetch('../../bank.json').then(r=>{
+const bank=await fetch('../../bank-preview-v2.json').then(r=>{
   if(!r.ok)throw Error('SLOOP factory bank not present. Run original bank builder.');
   return r.json();
 });
-if(bank.format!=='BRKLOOP_BANK_V1')throw Error('Expected SLOOP V1 baseline');
+if(bank.format!=='BRKLOOP_BANK_V2_CANDIDATE'||bank.engines.reduce((n,e)=>n+e.presets.length,0)!==153)throw Error('Native SLOOP 153-sound bank missing');
 // Prototype starts with a blank score (factory sounds remain unchanged).
 const seed=structuredClone(bank.baseline);
-for(const t of seed.tracks){
+for(let k=0;k<seed.tracks.length;k++){
+  const t=seed.tracks[k];
   t.step?.forEach(s=>{s.n=0;s.time=2;s.flags=0;s.notes=[0,0,0,0];});
   t.dstep?.forEach(s=>{s.on=0;s.lvl.fill(0);s.rat.fill(0);});
   t.micro.fill(0);t.fill.fill(0);t.locks=[];
+  if(k<3){
+    const names=['WOBBLE','MUSIC BOX','GAME LEAD'];
+    const e=[0,1,3][k],i=bank.engines[e].presets.findIndex(p=>p.name===names[k]);
+    if(i<0)throw Error('Missing native factory default: '+names[k]);
+    const preset=bank.engines[e].presets[i];
+    const retained=[0,29,30,31,32,39,40].map(id=>t.p[id]);
+    t.engine=e;t.preset=i;t.p=[...preset.p];t.fm6=[...preset.fm6];
+    [0,29,30,31,32,39,40].forEach((id,j)=>{t.p[id]=retained[j]});
+  }
 }
 const session=createResearchEditSession(seed);
 const modeForTrack=['step','step','step','step'];
@@ -342,10 +352,15 @@ function renderSound(){
     optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
     $('sound-macros').append(newEl('p','hint','16 SLOOP drum lanes · select a kit and play the pads below.'));
   }
-  const shape=drums?[0,39,50]:track.engine===9?[0,39,50]:[0,39,1,2,3,4,50];
+  const shape=drums?[0,39,50]:track.engine===9?[0,28,39,50]:[0,28,39,1,2,3,4,50];
   for(const id of shape)soundControl($('sound-shape'),common[id],track.p[id],v=>writeParam(id,v));
   if(track.engine===9 && !drums)
     $('sound-shape').append(newEl('p','hint','FM6 envelopes are stored in its separate operator patch.'));
+  // Source-native LFO destinations and note transpose are part of factory presets.
+  $('sound-lfo').replaceChildren();
+  for(const id of [9,10,11,12,13,14,15,16,60,61,62])
+    soundControl($('sound-lfo'),common[id],track.p[id],value=>writeParam(id,value),
+      String(id).padStart(2,'0')+' / '+common[id].label);
   for(const id of [34,35,36,53,54,55,56,57])
     soundControl($('sound-fx'),common[id],track.p[id],v=>writeParam(id,v));
   if($('all-params').open)for(const d of common)
@@ -381,6 +396,8 @@ function render(){
     if(v.mode==='step')renderStep();else renderRoll();
     renderInspector();
   }
+  $('bpm').value=String(current().state.g[0]);
+  $('swing').value=String(current().state.g[1]);
   $('keyboard').hidden=!keyboardVisible;
   $('keyboard-area').classList.toggle('keys-collapsed',!keyboardVisible);
   $('toggle-keyboard').textContent=keyboardVisible?'HIDE KEYS':'SHOW KEYS';
@@ -390,6 +407,13 @@ function render(){
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+for(const [id,param] of [['bpm',0],['swing',1]]){
+  $(id).addEventListener('change',e=>{
+    const d=bank.globalControls[param];
+    const value=clamp(Number(e.target.value)||d.def,d.min,d.max);
+    commit({type:'setGlobalParam',track:current().v.track,param,value});
+  });
+}
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
 $('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
 $('toggle-keyboard').addEventListener('click',()=>{keyboardVisible=!keyboardVisible;render();});
