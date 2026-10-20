@@ -16,6 +16,24 @@
   <div class="edit-options"><label>LEN <input id="length" type="number" min="1" max="64" value="16"></label><label>DIV <select id="division"></select></label><label class="auto-label">AUTO <input id="auto" type="checkbox"></label>
 <div class="roll-pitch-nav" id="roll-pitch-nav" hidden><button id="roll-down" aria-label="Lower piano roll octave">−</button><strong id="roll-range">C3–B3</strong><button id="roll-up" aria-label="Raise piano roll octave">+</button></div>
 <button id="quick-erase" class="quick-erase" aria-label="Erase selected note or step">⌫ ERASE</button></div>
+<section class="groove-panel" id="groove-panel" aria-label="Drum groove ideas" hidden>
+  <div class="groove-top">
+    <div><small>IDEAS / DRUM GROOVE</small><strong>Build a beat</strong><p>Preview uses the native SLOOP drum kit; Apply is one Undo step.</p></div>
+    <label class="groove-select">STYLE<select id="groove-style" aria-label="Groove style">
+      <option value="HOUSE">HOUSE</option><option value="BREAK">BREAK</option>
+      <option value="BOOM_BAP">BOOM BAP</option><option value="DNB">DRUM &amp; BASS</option>
+      <option value="AMAPIANO">AMAPIANO</option>
+    </select></label>
+  </div>
+  <div class="groove-actions">
+    <button id="groove-preview" type="button">PREVIEW</button>
+    <button id="groove-next" type="button">NEXT VARIATION</button>
+    <button id="groove-apply" type="button" disabled>APPLY</button>
+    <button id="groove-cancel" type="button" disabled>CANCEL</button>
+    <span id="groove-meta" role="status" aria-live="polite">No preview · original pattern unchanged</span>
+  </div>
+  <div class="groove-visual" id="groove-visual" aria-label="Non-destructive drum groove preview"></div>
+</section>
 <div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
   <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
 </section>
