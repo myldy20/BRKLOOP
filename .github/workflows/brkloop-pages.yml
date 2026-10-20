@@ -65,6 +65,7 @@ jobs:
           node --check app.js
           node --check web/preview.js
           node --check web/preview-worklet.js
+          node --check research/hybrid-editor/prototype.js
           test -s dist/bank.json
           test -s build/preview/sloop-preview.wasm
       - name: Assemble static Pages site
@@ -75,11 +76,16 @@ jobs:
           cp build/preview/sloop-preview.wasm dist/site/web/
           cp dist/bank.json dist/site/bank.json
           cp LICENSE LICENSING.md dist/site/
+          # Research-only test fixture. Main/Pages stays on the old UI until this PR is approved.
+          mkdir -p dist/site/research/hybrid-editor
+          cp research/shared-edit-commands.mjs dist/site/research/
+          cp research/hybrid-editor/index.html research/hybrid-editor/prototype.js research/hybrid-editor/prototype.css dist/site/research/hybrid-editor/
           touch dist/site/.nojekyll
       - name: Browser regression (phone + desktop)
         run: |
           npm install --no-save --no-audit --no-fund playwright-core@1.56.1
           node tests/brkloop_browser_test.mjs
+          node tests/hybrid_editor_browser_test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
