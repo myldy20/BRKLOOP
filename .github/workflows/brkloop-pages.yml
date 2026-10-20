@@ -31,6 +31,15 @@ jobs:
           sudo apt-get install -y clang lld
       - name: Build factory bank from SLOOP
         run: node tools/build_brkloop_bank.mjs
+      - name: Audit original SLOOP descriptors and factory names
+        run: node tools/audit_brkloop_parity.mjs
+      - name: Test experimental shared Step/Roll command model
+        run: node tests/shared_edit_commands_test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brkloop-sloop-parity-report
+          path: dist/audit/
+          retention-days: 14
       - name: Build browser AudioWorklet DSP
         run: python tools/build_preview.py
       - name: Verify SLOOP's native/WASM audio equivalence
