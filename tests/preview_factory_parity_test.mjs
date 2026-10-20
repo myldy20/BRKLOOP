@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {FirmwareAudio} from '../web/preview-worklet.js';
 import {createResearchEditSession} from '../research/shared-edit-commands.mjs';
+import {panelAuditionPitch} from '../research/hybrid-editor/panel-pitch.mjs';
 
 const bank=JSON.parse(readFileSync('dist/audit/bank-v2-candidate.json','utf8'));
 assert.equal(bank.format,'BRKLOOP_BANK_V2_CANDIDATE');
@@ -49,10 +50,20 @@ const noLfo=structuredClone(correct);noLfo.tracks[0].p[14]=0;
 const filterOff=signal(noLfo,48,16384);
 const modDifference=waveformDelta(intact,filterOff);
 assert(modDifference>0.000001,'WOBBLE LFO-to-filter must demonstrably change original WASM output; delta='+modDifference);
+// Low-level preview_note is raw MIDI and does not call physical keyboard
+// kb_map(). The on-screen SOUND piano must explicitly use original P_TRANS.
 const higher=structuredClone(correct);higher.tracks[0].p[28]=0;
-const transposed=signal(higher,48,16384);
-const pitchDifference=waveformDelta(intact,transposed);
-assert(pitchDifference>0.00001,'WOBBLE -24 transpose must audibly affect output; delta='+pitchDifference);
+const raw=signal(higher,48,16384);
+assert.equal(waveformDelta(intact,raw),0,
+  'Raw preview_note must remain absolute MIDI; transpose lives in FM-1 panel mapping');
+const panelNote=panelAuditionPitch(48,correct.tracks[0].p);
+assert.equal(panelNote,24,'The FM-1 C3 key on WOBBLE must trigger C1 (-24)');
+const unshifted=panelAuditionPitch(48,higher.tracks[0].p);
+assert.equal(unshifted,48);
+const soundAtPanelPitch=signal(correct,panelNote,16384);
+const pitchDifference=waveformDelta(soundAtPanelPitch,intact);
+assert(pitchDifference>0.00001,
+  'FM-1 panel mapping C3→C1 must audibly lower WOBBLE vs raw C3; delta='+pitchDifference);
 function positionAfter(tempo){
   const s=initial();s.g[0]=tempo;
   s.tracks[0].p[29]=16;s.tracks[0].p[30]=2;
