@@ -57,7 +57,7 @@ Desktop: left track strip, main pattern editor, right inspector/sound panel, low
 
 ## 4. Feature parity verification pipeline
 
-Build a machine-readable registry (63 common track, 47 global, eight edits per engine in current mock), with: `scope/id/name/type/min/max/default/enum/unit/applicableEngines/browserDSPRoute/uiRoute/persistence/testStatus`.
+Build a machine-readable registry (63 common track, 49 global, eight edits per engine in current mock), with: `scope/id/name/type/min/max/default/enum/unit/applicableEngines/browserDSPRoute/uiRoute/persistence/testStatus`.
 
 Classify each original feature as:
 - A. Works in browser **and** has UI.
