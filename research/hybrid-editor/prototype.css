@@ -113,3 +113,60 @@ header,.topbar,.editor-head,.edit-options,.keys-head{display:flex;align-items:ce
   .transport-tempo input{width:76px;height:40px}
   .sound-section .section-info{display:none}
 }
+
+
+/* Sound workspace v3: a compact instrument panel, not a database dump. */
+.sound-panel{background:#161f29;border-color:#435260;padding:18px;min-height:0}
+.sound-header{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid #334454;padding:0 0 14px}
+.sound-identity h2{font-size:clamp(20px,3vw,29px);font-weight:820;line-height:1.15;margin:5px 0 3px;color:#f5e9d7}
+.sound-identity small{font-size:10px;letter-spacing:1px}
+.sound-identity .hint{font-weight:650;letter-spacing:.04em}
+.sound-live{display:flex;align-items:center;gap:7px;flex:none;color:#b5cebb;font-size:10px;letter-spacing:.09em;font-weight:800}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#9cdb9f;box-shadow:0 0 10px #9cdb9f80}
+.sound-selectors{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.sound-selectors label{color:#adbac6;font-size:10px}
+.sound-selectors select{font-size:14px;height:44px;background:#202c38;border-color:#475967}
+.sound-pages{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;border:1px solid #3c4b5a;border-radius:9px;background:#101a23;padding:5px;margin:10px 0 13px;overscroll-behavior-x:contain}
+.sound-pages button{min-width:70px;flex:1;padding:10px 12px;font-size:11px;font-weight:850;letter-spacing:.06em;white-space:nowrap;background:transparent;border:1px solid transparent;color:#a9bac8;min-height:41px}
+.sound-pages button[aria-pressed=true]{color:#1a1c1e;background:#e8bf81;border-color:#e8bf81;box-shadow:0 1px 8px #e8bf8126}
+.sound-pages button:active{filter:brightness(1.1)}
+.sound-page{min-height:175px}
+.sound-page .sound-section{border-top:0;margin:0;padding:0}
+.sound-page .sound-section+.sound-section{margin-top:17px;padding-top:16px;border-top:1px solid #354455}
+.sound-page .section-title{color:#d5dce4;font-size:11px;letter-spacing:.1em;margin-bottom:8px;line-height:1.5}
+.sound-page .section-info{color:#7992a2}
+.sound-page .sound-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;padding:0}
+.sound-control{display:grid;grid-template-columns:minmax(95px,117px) minmax(0,1fr) 42px;align-items:center;column-gap:9px;min-height:54px;padding:10px 11px;border:1px solid #334656;border-radius:7px;background:#1e2b37}
+.sound-control .control-name{font-size:12px;letter-spacing:0;font-weight:650;line-height:1.25;color:#cedae2;overflow-wrap:anywhere}
+.sound-control .control-value{text-align:right;color:#ffcc81;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums}
+.sound-control input[type=range]{grid-column:2;width:100%;margin:0;padding:0;height:29px;accent-color:#ebb773;touch-action:none}
+.sound-control select{grid-column:2 / span 2;width:100%;height:36px;min-height:36px;padding:5px 8px;font-size:12px;border-color:#516471;background:#131e27}
+.sound-control:focus-within{border-color:#d5aa72;background:#263745}
+.sound-help{font-size:13px;color:#aabcc9;line-height:1.6;padding:12px 5px}
+.sound-search-label{display:flex;gap:12px;align-items:center;max-width:700px;font-size:11px;font-weight:750;color:#b4c8d5;margin:8px 0 16px}
+.sound-search-label input{flex:1;min-width:0;font-size:14px;height:42px}
+.sound-advanced{background:#1a2732;padding:11px;border-color:#415360}
+.sound-advanced summary{font-size:12px;letter-spacing:.04em;color:#e2e7e9}
+.sound-advanced .sound-controls{margin-top:11px}
+.sound-advanced .hint{line-height:1.4}
+.sound-panel input[type=range]::-webkit-slider-thumb{cursor:ew-resize}
+@media(max-width:940px){
+ .sound-panel{padding:12px}
+ .sound-page .sound-controls{grid-template-columns:1fr}
+ .sound-control{min-height:53px;grid-template-columns:minmax(105px,129px) minmax(0,1fr) 40px}
+ .sound-pages{position:sticky;top:48px;z-index:11;box-shadow:0 8px 17px #080f1590;margin-top:8px}
+ .sound-pages button{min-width:63px;flex:1 0 auto;padding:10px 8px}
+}
+@media(max-width:550px){
+ .sound-panel{border-radius:9px}
+ .sound-selectors{grid-template-columns:1fr;gap:9px}
+ .sound-selectors select{height:42px}
+ .sound-header{align-items:flex-start}
+ .sound-live{font-size:9px;padding-top:3px}
+ .sound-control{grid-template-columns:minmax(98px,114px) minmax(0,1fr) 35px;padding:8px 9px;column-gap:8px;min-height:51px}
+ .sound-control .control-name{font-size:12px}
+ .sound-control .control-value{font-size:12px}
+ .sound-page .sound-controls{gap:5px}
+ .sound-page .section-title{margin-bottom:6px}
+ .sound-pages{top:45px}
+}
