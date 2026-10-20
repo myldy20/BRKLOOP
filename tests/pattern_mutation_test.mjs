@@ -56,6 +56,8 @@ for(const k of [0,3]){
       assert.deepEqual(t,populated(k),'pure generator never changes source');
       assert.equal(a.steps.length,64);assert.equal(a.micro.length,64);
       assert(a.micro.every(v=>Number.isInteger(v)&&v>=-32&&v<=31),'native micro range');
+      if(['SHIFT','FILL','THIN'].includes(mode))
+        assert.deepEqual(a.steps[4],t[key][4],'step carrying native parameter lock stays intact');
       assert.deepEqual(a.steps.slice(32),t[key].slice(32),'steps outside LEN unchanged');
       assert.deepEqual(a.micro.slice(32),t.micro.slice(32),'micro outside LEN unchanged');
       if(k===3){
