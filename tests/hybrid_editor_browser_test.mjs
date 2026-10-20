@@ -41,6 +41,12 @@ try{
     await page.locator('.step-cell[data-step="0"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3',
       'One tap on empty STEP places currently highlighted pitch');
+    console.log('DIAGNOSTIC KEYBOARD '+d.name,await page.evaluate(()=>({
+      status:document.getElementById('status')?.textContent,
+      keyboardNoteButtons:[...document.querySelectorAll('.piano-key')].map(x=>x.dataset.note),
+      keyboardHidden:document.getElementById('keyboard')?.hidden,
+      keyboardOuter:document.getElementById('keyboard')?.outerHTML.slice(0,350)
+    })));
     await page.locator('.piano-key[data-note="52"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
       'Piano key writes selected step directly');
