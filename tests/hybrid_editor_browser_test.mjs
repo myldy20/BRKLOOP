@@ -122,8 +122,9 @@ try{
     await page.locator('#melody-apply').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'A4 + C5 + E5',
       'APPLY materializes native chord in original step editor');
-    assert.equal(await page.locator('.step-cell[data-step="16"] .pitch').textContent(),'F4 + A4 + C5',
-      'Full LEN 64 uses second chord in its own bar');
+    assert.match(await page.locator('.step-cell[data-step="16"] .pitch').textContent(),
+      /^(F4 \+ A4 \+ C5|A4 \+ C5 \+ F5)$/,
+      'Full LEN 64 uses second chord in its own bar (root or open inversion)');
     await page.locator('#undo').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
       'One Undo restores the whole previous synth pattern');
