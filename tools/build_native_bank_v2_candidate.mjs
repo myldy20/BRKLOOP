@@ -51,6 +51,7 @@ const candidate={
   source:'compiled original SLOOP 2.7 native preset_t tables; NOT qualified for deployment',
   derivedFromLegacyFormat:legacy.format,
   pe0:legacy.pe0,baseline:legacy.baseline,sequence:legacy.sequence,
+  trackControls:legacy.trackControls,globalControls:legacy.globalControls,
   engines,kits:legacy.kits,
   migration:{from:'BRKLOOP_BANK_V1',to:'BRKLOOP_BANK_V2_CANDIDATE',strategy:'exact engine and preset name, preserve saved p[],fm6,steps,locks',legacyIndexMap}
 };
