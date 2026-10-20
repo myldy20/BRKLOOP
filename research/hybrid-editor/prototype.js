@@ -2,6 +2,7 @@
 // RESEARCH ONLY. Native SLOOP state, shared Step/Roll command session, no app.js changes.
 import {createResearchEditSession} from '../shared-edit-commands.mjs';
 import {LocalPreview} from '../../web/preview.js';
+import {panelAuditionPitch} from './panel-pitch.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -79,7 +80,9 @@ function midiKey(note){
   const {v}=current();
   if(v.track===3)return;
   if(workspaceTab==='sound'){
-    void audition(note,v.track);
+    const mapped=panelAuditionPitch(note,current().track.p);
+    status('PANEL KEY '+noteName(note)+' → '+noteName(mapped)+' · SLOOP TRANSPOSE '+current().track.p[28]);
+    void audition(mapped,v.track);
     renderKeyboard();return;
   }
   if(chord){
@@ -276,7 +279,7 @@ function renderKeyboard(){
   $('chord').hidden=v.track===3;
   $('chord').setAttribute('aria-pressed',String(chord));
   $('chord-done').hidden=!chord;$('chord-cancel').hidden=!chord;
-  $('chord-preview').textContent=chord?'CHORD: '+(chordNotes.map(noteName).join(' + ')||'tap notes, then Done'):workspaceTab==='sound'?'Tap keys to audition the current sound.':'Tap keys to write selected step, or tap an empty step to stamp highlighted pitch.';
+  $('chord-preview').textContent=chord?'CHORD: '+(chordNotes.map(noteName).join(' + ')||'tap notes, then Done'):workspaceTab==='sound'?'FM-1 PANEL: transposes live key by '+current().track.p[28]+' semitones. Piano Roll steps retain absolute pitches.':'Tap keys to write selected step, or tap an empty step to stamp highlighted pitch.';
   if(v.track===3){
     const pads=newEl('div','step-row');
     laneNames.forEach((name,i)=>{
