@@ -31,8 +31,33 @@ jobs:
           sudo apt-get install -y clang lld
       - name: Build factory bank from SLOOP
         run: node tools/build_brkloop_bank.mjs
+      - name: Audit original SLOOP descriptors and factory names
+        run: node tools/audit_brkloop_parity.mjs
+      - name: Test experimental shared Step/Roll command model
+        run: node tests/shared_edit_commands_test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brkloop-sloop-parity-report
+          path: dist/audit/
+          retention-days: 14
       - name: Build browser AudioWorklet DSP
         run: python tools/build_preview.py
+      - name: Compile and compare all native factory presets
+        run: |
+          mkdir -p build/host
+          clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src research/native_factory_dump.c -o build/host/native_factory_dump
+          node tools/compare_native_factory.mjs
+          node tests/factory_preset_migration_test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brkloop-native-factory-audit
+          path: dist/audit/native-factory*
+          retention-days: 14
+      - name: Probe SLOOP 2.7 continuation flag bridge (known gap)
+        run: |
+          mkdir -p build/host
+          clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src tests/preview_continuation_probe.c -o build/host/preview_continuation_probe
+          build/host/preview_continuation_probe
       - name: Verify SLOOP's native/WASM audio equivalence
         run: sh tests/run_preview_tests.sh
       - name: Validate BRKLOOP scripts and assets
