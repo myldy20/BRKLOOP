@@ -47,6 +47,7 @@ jobs:
           mkdir -p build/host
           clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src research/native_factory_dump.c -o build/host/native_factory_dump
           node tools/compare_native_factory.mjs
+          node tests/factory_preset_migration_test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: brkloop-native-factory-audit
