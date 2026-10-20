@@ -6,7 +6,7 @@
 
 SLOOP sources checked:
 - firmware/src/core.h: SLOOP track / step / global enums, flags, sample state and native arrangement.
-- web/editor.html: editor mock's descriptor lists for **63 common track parameters**, **47 global parameters**, and 8 engine-specific edit parameters per active engine (12 engines).
+- web/editor.html: editor mock's descriptor lists for **63 common track parameters**, **49 global parameters**, and 8 engine-specific edit parameters per active engine (12 engines).
 - web/EDITOR_PROTOCOL.md: parameter GET/DESC, TRACK_PARAM, step, micro, locks and fill encoding.
 - firmware/host/preview.c, web/preview.js, web/preview-worklet.js: actual browser-to-WASM DSP bridge and playback behaviour.
 - SLOOP.md: original product behaviour, recording, scenes and sections, user sounds and Song.
@@ -55,7 +55,7 @@ Generate from SLOOP descriptors/build artefacts instead of writing a second manu
 - Slicer and other performance params; several field names repeat with different indexes
 - Eight engine edit params must be routed separately for each engine.
 
-**GLOBAL (47 descriptors in mock):**
+**GLOBAL (49 descriptors in mock):**
 - BPM/swing/click, tuning
 - Delay/reverb/chorus/mix master, dust/duck/filter, texture
 - Drum settings, mixer buses and per-track routing
