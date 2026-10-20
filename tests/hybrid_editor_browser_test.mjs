@@ -133,6 +133,40 @@ try{
     await page.locator('#undo').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-melody.png',fullPage:true});
+    // Mutate an EXISTING synth score without changing its notes, preset or
+    // the original editor until Apply. Accent changes velocity and Undo is atomic.
+    assert.equal(await page.locator('#mutation-panel').isVisible(),true);
+    await page.locator('.step-cell[data-step="0"]').click(); // select, don't erase
+    const originalVelocity=await page.locator('#velocity').inputValue();
+    await page.locator('#mutation-mode').selectOption('ACCENT');
+    await page.evaluate(()=>{
+      const input=document.getElementById('mutation-amount');
+      input.value='100';input.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    await page.locator('#mutation-preview').click();
+    assert.equal(await page.locator('#mutation-apply').isEnabled(),true);
+    assert.equal(await page.locator('#mutation-meta').textContent().then(s=>s.includes('DRAFT #1')),true);
+    assert.equal(await page.locator('#velocity').inputValue(),originalVelocity,
+      'Mutations must not change editable synth velocity until Apply');
+    assert.equal(await page.locator('.mutation-mini-cell.changed').count()>0,true,
+      'Mutation visually highlights changes even when notes stay in place');
+    await page.locator('#mutation-next').click();
+    assert.equal(await page.locator('#mutation-meta').textContent().then(s=>s.includes('DRAFT #2')),true);
+    await page.locator('#mutation-cancel').click();
+    assert.equal(await page.locator('#mutation-apply').isDisabled(),true);
+    assert.equal(await page.locator('#velocity').inputValue(),originalVelocity);
+    await page.locator('#mutation-preview').click();
+    await page.locator('#mutation-apply').click();
+    assert.notEqual(await page.locator('#velocity').inputValue(),originalVelocity,
+      'Applied accents should alter native velocity, keeping the MIDI note intact');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#velocity').inputValue(),originalVelocity);
+    await page.locator('#redo').click();
+    assert.notEqual(await page.locator('#velocity').inputValue(),originalVelocity);
+    await page.locator('#undo').click();
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-mutation-synth.png',fullPage:true});
+
 
     await page.locator('.step-cell[data-step="63"]').click();
     assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'B3',
@@ -181,6 +215,27 @@ try{
     await page.locator('#redo').click();
     assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'●');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-grooves.png',fullPage:true});
+    // Mutate already-generated drum patterns, preserving sound kit and
+    // all synth tracks. The candidate remains outside the editor until Apply.
+    assert.equal(await page.locator('#mutation-panel').isVisible(),true);
+    await page.locator('#mutation-mode').selectOption('THIN');
+    const oldGrooveHits=await page.locator('.groove-mini-cell.on').count();
+    await page.locator('#mutation-preview').click();
+    assert.equal(await page.locator('#mutation-apply').isEnabled(),true);
+    assert.equal(await page.locator('.mutation-mini-cell.changed').count()>0,true);
+    assert.equal(await page.locator('.groove-mini-cell.on').count(),oldGrooveHits,
+      'Drum generator visual source stays unchanged through mutation audition');
+    await page.locator('#mutation-apply').click();
+    const lessGrooveHits=await page.locator('.groove-mini-cell.on').count();
+    assert(lessGrooveHits<oldGrooveHits,'Density-minus removes some existing drum hits');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.groove-mini-cell.on').count(),oldGrooveHits,
+      'Undo restores original drum pattern in one step');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('.groove-mini-cell.on').count(),lessGrooveHits);
+    await page.locator('#undo').click();
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-mutation-drums.png',fullPage:true});
+
 
     // SOUND uses a focused synth workflow and keeps complete source metadata in ALL.
     await page.locator('#tracks button').first().click();

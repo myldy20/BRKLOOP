@@ -71,6 +71,34 @@
   </div>
   <div class="melody-visual" id="melody-visual" aria-label="Non-destructive melodic idea preview"></div>
 </section>
+<section class="mutation-panel" id="mutation-panel" aria-label="Mutate existing pattern">
+  <div class="mutation-heading">
+    <div><small>EVOLVE / THIS TRACK</small><strong>Mutate your pattern</strong>
+      <p>Rework the current notes or hits. Preserve the instrument, chord pitches and original score until Apply.</p>
+    </div>
+    <span class="mutation-preserved" id="mutation-preserved">SOURCE / EMPTY</span>
+  </div>
+  <div class="mutation-controls">
+    <label>FOCUS<select id="mutation-mode" aria-label="Mutation focus">
+      <option value="SHIFT">RHYTHM SHIFT</option>
+      <option value="FILL">DENSITY +</option>
+      <option value="THIN">DENSITY −</option>
+      <option value="ACCENT">ACCENTS</option>
+      <option value="HUMANIZE">MICROTIMING</option>
+    </select></label>
+    <label>AMOUNT <output for="mutation-amount" id="mutation-amount-value">35%</output>
+      <input id="mutation-amount" aria-label="Mutation amount" type="range" min="0" max="100" step="5" value="35">
+    </label>
+  </div>
+  <div class="groove-actions">
+    <button id="mutation-preview" type="button">PREVIEW MUTATION</button>
+    <button id="mutation-next" type="button">NEXT VARIATION</button>
+    <button id="mutation-apply" type="button" disabled>APPLY</button>
+    <button id="mutation-cancel" type="button" disabled>CANCEL</button>
+    <span id="mutation-meta" role="status" aria-live="polite">Enter notes or drum hits first.</span>
+  </div>
+  <div class="mutation-visual" id="mutation-visual" aria-label="Pattern before and after mutation"></div>
+</section>
 <div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
   <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
 </section>

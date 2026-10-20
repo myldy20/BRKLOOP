@@ -38,6 +38,43 @@ function synthStepWithNotes(step,notes) {
 function apply(data,cmd){
   const {type,track:trackId,step:i}=cmd;
   const t=trackAt(data,trackId);
+  if(type==='applyPatternMutation'){
+    if(!Array.isArray(cmd.steps)||cmd.steps.length!==64||
+       !Array.isArray(cmd.micro)||cmd.micro.length!==64)
+      throw new Error('Mutation requires 64 native steps and 64 microtiming values');
+    if(cmd.length!==t.p[29])throw new Error('Mutation candidate no longer matches track LEN');
+    const micro=cmd.micro.map(v=>integer(v,-32,31,'microtiming'));
+    // A deep clone is changed only after the entire payload has passed
+    // validation, preserving locks, fills, engine, tuning and other tracks.
+    if(trackId===3){
+      const steps=cmd.steps.map((s,i)=>{
+        if(!s||!Number.isInteger(s.on)||s.on<0||s.on>65535||
+           !Array.isArray(s.lvl)||s.lvl.length!==16||
+           !Array.isArray(s.rat)||s.rat.length!==16)
+          throw new RangeError('Invalid drum mutation step '+i);
+        s.lvl.forEach(v=>integer(v,0,3,'drum level'));
+        s.rat.forEach(v=>integer(v,0,3,'drum ratchet'));
+        return {on:s.on,lvl:[...s.lvl],rat:[...s.rat]};
+      });
+      t.dstep=steps;
+    }else{
+      const steps=cmd.steps.map((s,i)=>{
+        if(!s||!Array.isArray(s.notes)||s.notes.length!==4)
+          throw new RangeError('Invalid synth mutation step '+i);
+        const n=integer(s.n,0,4,'note count');
+        s.notes.forEach(v=>integer(v,0,127,'note'));
+        if(new Set(s.notes.slice(0,n)).size!==n)throw new Error('Duplicate pitch in mutated step '+i);
+        const time=integer(s.time,0,2,'gate');
+        if(time===0&&n===0)throw new RangeError('Mutated NOTE must contain pitches');
+        return {notes:[...s.notes],n,time,
+          flags:integer(s.flags,0,255,'flags'),vel:integer(s.vel,0,127,'velocity'),
+          lvl:integer(s.lvl,0,255,'note levels'),rat:integer(s.rat,0,255,'ratchets')};
+      });
+      t.step=steps;
+    }
+    t.micro=micro;
+    return;
+  }
   if(type==='replaceDrumGroove'){
     if(trackId!==3)throw Error('Groove replacement requires DRUMS');
     if(!Array.isArray(cmd.steps)||cmd.steps.length!==64)throw Error('Groove requires 64 native drum steps');
