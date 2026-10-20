@@ -57,6 +57,26 @@ function apply(data,cmd){
     t.micro.fill(0);t.fill.fill(0);t.locks=[];
     return;
   }
+  if(type==='replaceMelodicIdea'){
+    if(trackId===3)throw Error('Melodic ideas require a synth track');
+    if(!Array.isArray(cmd.steps)||cmd.steps.length!==64)throw Error('Idea requires 64 native synth steps');
+    // Validate every step before replacing anything. Sound engine, original
+    // factory sound, LEN/DIV, transposition and all other tracks stay intact.
+    const steps=cmd.steps.map((s,i)=>{
+      if(!s||!Array.isArray(s.notes)||s.notes.length!==4)throw new RangeError('Invalid notes at step '+i);
+      const n=integer(s.n,0,4,'note count');
+      s.notes.forEach(v=>integer(v,0,127,'MIDI pitch'));
+      if(new Set(s.notes.slice(0,n)).size!==n)throw new Error('Duplicate MIDI pitch at step '+i);
+      const time=integer(s.time,0,2,'gate');
+      if(time===0&&n===0)throw new RangeError('Played step must contain notes');
+      return {notes:[...s.notes],n,time,
+        flags:integer(s.flags,0,255,'flags'),vel:integer(s.vel,0,127,'velocity'),
+        lvl:integer(s.lvl,0,255,'expression'),rat:integer(s.rat,0,255,'ratchet')};
+    });
+    if(cmd.length!==t.p[29])throw Error('Idea no longer matches track LEN');
+    t.step=steps;t.micro.fill(0);t.fill.fill(0);t.locks=[];
+    return;
+  }
   if(type==='setLength'){t.p[29]=integer(cmd.length,1,64,'LEN');return;}
   if(type==='setDivision'){t.p[30]=integer(cmd.division,0,8,'DIV');return;}
   // Sound controls remain native SLOOP parameters; changes participate in
