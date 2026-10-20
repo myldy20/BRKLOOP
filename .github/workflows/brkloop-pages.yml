@@ -33,6 +33,14 @@ jobs:
         run: node tools/build_brkloop_bank.mjs
       - name: Build browser AudioWorklet DSP
         run: python tools/build_preview.py
+      - name: Generate and qualify full original SLOOP 153-sound bank for Preview
+        run: |
+          mkdir -p build/host dist/audit
+          clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src research/native_factory_dump.c -o build/host/native_factory_dump
+          node tools/compare_native_factory.mjs
+          node tools/build_native_bank_v2_candidate.mjs
+          node tests/native_bank_v2_candidate_test.mjs
+          node tests/preview_factory_parity_test.mjs
       - name: Verify SLOOP's native/WASM audio equivalence
         run: sh tests/run_preview_tests.sh
       - name: Validate BRKLOOP scripts and assets
@@ -42,7 +50,9 @@ jobs:
           node --check web/preview-worklet.js
           node --check research/shared-edit-commands.mjs
           node --check research/hybrid-editor/prototype.js
+          node --check research/hybrid-editor/panel-pitch.mjs
           test -s dist/bank.json
+          test -s dist/audit/bank-v2-candidate.json
           test -s build/preview/sloop-preview.wasm
       - name: Assemble static Pages site
         run: |
@@ -51,16 +61,24 @@ jobs:
           cp web/preview.js web/preview-worklet.js dist/site/web/
           cp build/preview/sloop-preview.wasm dist/site/web/
           cp dist/bank.json dist/site/bank.json
+          cp dist/audit/bank-v2-candidate.json dist/site/bank-preview-v2.json
           cp LICENSE LICENSING.md dist/site/
           cp preview/index.html dist/site/preview/
           cp research/shared-edit-commands.mjs dist/site/research/
-          cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js dist/site/research/hybrid-editor/
+          cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js research/hybrid-editor/panel-pitch.mjs dist/site/research/hybrid-editor/
           touch dist/site/.nojekyll
       - name: Browser regression (phone + desktop)
         run: |
           npm install --no-save --no-audit --no-fund playwright-core@1.56.1
           node tests/brkloop_browser_test.mjs
           node tests/hybrid_editor_browser_test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brkloop-native-parity-audit
+          path: dist/audit/
+          if-no-files-found: ignore
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -6,7 +6,8 @@
 </head><body>
 <div class="shell">
 <header><div><small>BRKLOOP / RESEARCH 01</small><h1>Make a pattern</h1></div><div class="status" id="status">Experimental editor</div></header>
-<div class="topbar"><button id="play">▶ Play</button><button id="stop">■ Stop</button><span class="divider"></span><button id="undo" aria-label="Undo">↶ Undo</button><button id="redo" aria-label="Redo">↷ Redo</button><span class="hint">Same SLOOP steps, two views</span></div>
+<div class="topbar"><button id="play">▶ Play</button><button id="stop">■ Stop</button><span class="divider"></span><button id="undo" aria-label="Undo">↶ Undo</button><button id="redo" aria-label="Redo">↷ Redo</button><div class="transport-tempo"><label>BPM <input id="bpm" type="number" min="40" max="240" step="1" value="90" inputmode="numeric"></label>
+<label>SWING <input id="swing" type="number" min="0" max="100" step="1" value="0" inputmode="numeric"></label></div></div>
 <div class="tracks" id="tracks"></div>
 <nav class="workspace-tabs" aria-label="Workspace"><button id="pattern-tab" aria-pressed="true">PATTERN</button><button id="sound-tab" aria-pressed="false">SOUND</button><span id="sound-name" class="hint">Select a track to edit sound</span></nav>
 <main class="workspace" id="workspace">
@@ -26,10 +27,11 @@
     <label id="kit-wrap" hidden>DRUM KIT<select id="kit-select" aria-label="Drum kit"></select></label>
   </div>
   <div class="sound-section"><div class="section-title">ENGINE MACROS</div><div class="sound-controls" id="sound-macros"></div></div>
-  <div class="sound-section"><div class="section-title">MIX &amp; SHAPE</div><div class="sound-controls" id="sound-shape"></div></div>
+  <div class="sound-section"><div class="section-title">LFO / MODULATION <span class="section-info">RATE · FILTER · PITCH · SHAPE · AMP</span></div><div class="sound-controls" id="sound-lfo"></div></div>
+  <div class="sound-section"><div class="section-title">TUNING, ENVELOPE &amp; MIX</div><div class="sound-controls" id="sound-shape"></div></div>
   <div class="sound-section"><div class="section-title">TRACK FX</div><div class="sound-controls" id="sound-fx"></div></div>
-  <details class="sound-advanced" id="all-params"><summary>ALL TRACK PARAMETERS · <span id="param-count">63</span></summary><p class="hint">Original SLOOP descriptors; some parameters depend on engine and performance mode.</p><div class="sound-controls" id="sound-advanced-controls"></div></details>
-  <details class="sound-advanced" id="all-globals"><summary>GLOBAL / MASTER · <span id="global-count">49</span></summary><p class="hint">Some global controls are hardware-only and may not affect browser audio.</p><div class="sound-controls" id="sound-global-controls"></div></details>
+  <details class="sound-advanced" id="all-params"><summary>MORE TRACK SETTINGS · <span id="param-count">63</span></summary><p class="hint">Original SLOOP descriptors; some parameters depend on engine and performance mode.</p><div class="sound-controls" id="sound-advanced-controls"></div></details>
+  <details class="sound-advanced" id="all-globals"><summary>OTHER GLOBAL SETTINGS · <span id="global-count">49</span></summary><p class="hint">Some global controls are hardware-only and may not affect browser audio.</p><div class="sound-controls" id="sound-global-controls"></div></details>
 </section>
 <aside class="inspector" id="inspector"><div class="label">SELECTED STEP</div><div class="selected" id="selected">01</div><div id="notes">Tap a step, then a key.</div><div class="inspector-actions"><button id="rest">REST</button><button id="tie">TIE</button><button id="clear">CLEAR</button></div><label>Velocity <input type="range" id="velocity" min="1" max="127" value="96"></label><output id="velocity-value">96</output><div class="hint">Selection, editing and Undo are shared by Step and Roll.</div></aside>
 </main>
@@ -38,7 +40,7 @@
 <div id="keyboard" class="keyboard"></div>
 <div id="chord-preview" class="hint"></div>
 </div>
-<footer>Preview Lab / 02 · Direct note entry + Sound · changes are temporary until project save is added</footer>
+<footer>BRKLOOP / Native preview · compiled SLOOP 153-preset bank · session data resets on reload</footer>
 </div>
 <script type="module" src="./prototype.js"></script>
 </body></html>
