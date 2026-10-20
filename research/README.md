@@ -5,9 +5,30 @@
 ## Source-level findings (verify the generated CI report)
 
 - Native SLOOP 2.7 factory trim table \`firmware/src/preset_trim.h\` has **153 names for 12 compiled engine families**, plus four entries for the experimental, disabled \`FELUCCA_SLICE\` engine. The current \`web/editor.html\` mock only exposes **115 names**, used by \`tools/build_brkloop_bank.mjs\`. Hence the BRKLOOP web catalog is missing **38 factory sound selections** relative to the native firmware. This does *not* by itself prove all native patch states are available to the browser, nor does it justify fabricating missing presets.
-- The mock exposes 63 common track descriptors, 47 global descriptors and eight engine descriptors in each of 12 engines; the audit program interrogates these through the same mock editor command protocol as the production bank builder and exports raw metadata to \`dist/audit/sloop-capabilities.json\`.
+- The mock exposes 63 common track descriptors, 49 global descriptors and eight engine descriptors in each of 12 engines; the audit program interrogates these through the same mock editor command protocol as the production bank builder and exports raw metadata to \`dist/audit/sloop-capabilities.json\`.
 - \`web/preview-worklet.js\` sends note flags, but \`firmware/host/preview.c::preview_step()\` masks them with \`&=3u\`, losing SLOOP 2.7's \`SF_CONT0..3\` note-continuation flags. **The browser cannot be claimed equivalent for overlapping sustained polyphonic notes until a native/WASM behaviour fixture passes.** Existing general engine sample-parity tests do not prove this corner.
 - The original binary preview host and sequencer were left untouched. No browser runtime fix was silently slipped into an audit.
+
+
+### Verified per-engine catalog deficit (CI run 39390185198)
+
+| Engine | Native | Mock web catalog | Missing |
+| --- | ---: | ---: | ---: |
+| ANALOG | 22 | 15 | 7 |
+| DIGITAL | 22 | 14 | 8 |
+| PHASE | 8 | 5 | 3 |
+| LOFI | 8 | 3 | 5 |
+| SAMPLE | 11 | 10 | 1 |
+| VOICE | 7 | 5 | 2 |
+| TRIO | 14 | 8 | 6 |
+| WHEEL | 8 | 4 | 4 |
+| GRAIN | 8 | 6 | 2 |
+| FM6 | 8 | 8 | 0 |
+| PHYS | 26 | 26 | 0 |
+| NOISE | 11 | 11 | 0 |
+| **Total** | **153** | **115** | **38** |
+
+The generator also sees 46 kit labels in the mock. SLOOP's user-facing description lists 37 factory drum kits; the difference includes non-factory categories and must not be presented as 46 factory kits without classification.
 
 ## Prototype in research/
 
@@ -27,6 +48,9 @@ From this branch, with Node 22+:
  
     node tools/audit_brkloop_parity.mjs
     node tests/shared_edit_commands_test.mjs
+    # After python tools/build_preview.py:
+    clang -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src tests/preview_continuation_probe.c -o build/host/preview_continuation_probe
+    build/host/preview_continuation_probe
 
 The first writes \`dist/audit/sloop-capabilities.json\` and \`dist/audit/summary.md\`. The GitHub Actions PR build uploads the report artifact and still runs native/WASM audio parity, browser interaction checks and the original build.
 
