@@ -41,6 +41,7 @@ jobs:
           node tools/build_native_bank_v2_candidate.mjs
           node tests/native_bank_v2_candidate_test.mjs
           node tests/preview_factory_parity_test.mjs
+          node tests/live_sound_parameter_test.mjs
       - name: Verify SLOOP's native/WASM audio equivalence
         run: sh tests/run_preview_tests.sh
       - name: Validate BRKLOOP scripts and assets
