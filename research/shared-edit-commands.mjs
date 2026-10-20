@@ -38,6 +38,25 @@ function synthStepWithNotes(step,notes) {
 function apply(data,cmd){
   const {type,track:trackId,step:i}=cmd;
   const t=trackAt(data,trackId);
+  if(type==='replaceDrumGroove'){
+    if(trackId!==3)throw Error('Groove replacement requires DRUMS');
+    if(!Array.isArray(cmd.steps)||cmd.steps.length!==64)throw Error('Groove requires 64 native drum steps');
+    // Validate the entire candidate before touching the cloned project, so a bad
+    // imported generator result can never create a partially changed pattern.
+    const steps=cmd.steps.map((s,i)=>{
+      if(!s || !Number.isInteger(s.on) || s.on<0 || s.on>65535 ||
+         !Array.isArray(s.lvl) || !Array.isArray(s.rat) ||
+         s.lvl.length!==16 || s.rat.length!==16)
+        throw new RangeError('Invalid drum step '+i);
+      s.lvl.forEach(v=>integer(v,0,3,'drum level'));
+      s.rat.forEach(v=>integer(v,0,3,'drum ratchet'));
+      return {on:s.on,lvl:[...s.lvl],rat:[...s.rat]};
+    });
+    if(cmd.length!==t.p[29])throw Error('Groove candidate no longer matches track LEN');
+    t.dstep=steps;
+    t.micro.fill(0);t.fill.fill(0);t.locks=[];
+    return;
+  }
   if(type==='setLength'){t.p[29]=integer(cmd.length,1,64,'LEN');return;}
   if(type==='setDivision'){t.p[30]=integer(cmd.division,0,8,'DIV');return;}
   // Sound controls remain native SLOOP parameters; changes participate in
