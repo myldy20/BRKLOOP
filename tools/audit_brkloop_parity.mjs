@@ -62,6 +62,22 @@ try {
   assert.equal(report.global.length,info.gcount);
   assert.equal(report.engine.length,12);
   assert.equal(report.engine.flatMap(x=>x.params).length,96);
+  // Manually reviewed from app.js at the audit baseline. "UI affordance" is NOT proof of audible DSP effect.
+  const trackUiIds=new Set([0,1,2,3,4,29,30,34,35,36,39,40,50,53,57]);
+  const globalUiIds=new Set([0,1]);
+  const currentApp=readFileSync('app.js','utf8');
+  if(!currentApp.includes("function renderSound") || !currentApp.includes("function renderMixer") ||
+     !currentApp.includes("pattern-division"))throw Error('App entry controls changed; refresh audited UI routes');
+  for(const d of report.commonTrack)d.uiAffordance=trackUiIds.has(d.id)?'PRESENT':'NOT_SURFACED';
+  for(const d of report.global)d.uiAffordance=globalUiIds.has(d.id)?'PRESENT':'NOT_SURFACED';
+  for(const engine of report.engine)
+    for(const d of engine.params)d.uiAffordance=(d.max===d.min||d.label==='-')?'INACTIVE_DESCRIPTOR':'DYNAMIC_MACRO_UI';
+  report.uiAudit={kind:'STATIC_SOURCE_REVIEW_NOT_END_TO_END',trackCount:trackUiIds.size,
+    trackTotal:report.commonTrack.length,globalCount:globalUiIds.size,globalTotal:report.global.length,
+    engineSlots:report.engine.length*8, caveats:['PRESENT does not prove real audio effect',
+    'FM6 independent operator envelopes must not be conflated with common ADSR',
+    'Advanced Sound does not expose every common/native parameter']};
+
   assert.equal(report.factory.nativeCount,153,'Native factory preset inventory changed');
   assert(report.factory.mockCount>=115,'Mock factory catalog regressed below audited 115 names');
   if(report.factory.mockCount>report.factory.nativeCount)throw Error('Mock contains more presets than native factory inventory');
@@ -78,6 +94,7 @@ try {
   md+='**Native factory presets:** '+report.factory.nativeCount+'; **mock:** '+report.factory.mockCount+'; **difference:** '+(report.factory.nativeCount-report.factory.mockCount)+'. Counts are from \`preset_trim.h\` vs the mock NAMES protocol. Missing sound states are NOT reconstructed by this audit.\n\n';
   md+='| Engine | Native preset names | Mock preset names | Difference |\n|---|---:|---:|---:|\n';
   for(const x of report.engine)md+='| '+x.id+' '+x.name+' | '+x.countNative+' | '+x.countMock+' | '+x.countMissing+' |\n';
+  md+='\n**Current BRKLOOP visible static affordances:** '+report.uiAudit.trackCount+'/'+report.uiAudit.trackTotal+' common track IDs, '+report.uiAudit.globalCount+'/'+report.uiAudit.globalTotal+' global IDs, plus dynamic per-engine macros. This is source-level UI coverage only; audio qualification is separate.\n';
   md+='\nBridge: worklet serializes SF_CONT flags; host currently '+(report.bridge.hostMasksContinuation?'**masks them** (known playback parity gap).':'preserves them (confirm via native/WASM audio fixture).')+'\n';
   md+='\nInterpretation: catalog metadata alone is neither proof that a preset can be reconstructed nor proof that a particular parameter is audible. Test the firmware DSP separately.\n';
   writeFileSync('dist/audit/summary.md',md);
