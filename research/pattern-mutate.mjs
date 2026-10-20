@@ -50,7 +50,7 @@ const relocateDrum=(steps,i,j,lane)=>{
   steps[j].rat[lane]=steps[i].rat[lane];
   steps[i].on&=~mask;steps[i].lvl[lane]=0;steps[i].rat[lane]=0;
 };
-function mutateSynth(steps,micro,length,mode,amount,rng){
+function mutateSynth(steps,micro,length,mode,amount,rng,locked){
   if(mode==='SHIFT'){
     const events=shuffle(synthEvents(steps,length),rng);
     const budget=Math.ceil(events.length*amount/100);
@@ -58,10 +58,10 @@ function mutateSynth(steps,micro,length,mode,amount,rng){
     for(const i of events){
       if(changed>=budget)break;
       // Preserve the first step and note continuations across step boundaries.
-      if(i%16===0||!activeSynth(steps[i])||steps[(i+1)%length].time===1)continue;
+      if(i%16===0||locked.has(i)||!activeSynth(steps[i])||steps[(i+1)%length].time===1)continue;
       const targets=shuffle([i-1,i+1],rng);
       const j=targets.find(j=>j>=0&&j<length&&beats(i)===beats(j)
-        &&steps[j].time===2&&steps[(j+1)%length].time!==1);
+        &&!locked.has(j)&&steps[j].time===2&&steps[(j+1)%length].time!==1);
       if(j===undefined)continue;
       relocateSynth(steps,micro,i,j);changed++;
     }
@@ -69,7 +69,7 @@ function mutateSynth(steps,micro,length,mode,amount,rng){
   }
   if(mode==='FILL'){
     const candidates=shuffle(Array.from({length},(_,i)=>i).filter(i=>
-      steps[i].time===2&&i%16!==0&&steps[(i+1)%length].time!==1),rng);
+      steps[i].time===2&&i%16!==0&&!locked.has(i)&&steps[(i+1)%length].time!==1),rng);
     const sources=synthEvents(steps,length);
     let added=0,budget=Math.ceil(candidates.length*amount/160);
     for(const i of candidates){
@@ -84,7 +84,7 @@ function mutateSynth(steps,micro,length,mode,amount,rng){
     return;
   }
   if(mode==='THIN'){
-    const events=shuffle(synthEvents(steps,length).filter(i=>i%16!==0
+    const events=shuffle(synthEvents(steps,length).filter(i=>i%16!==0&&!locked.has(i)
       &&steps[(i+1)%length].time!==1),rng);
     const total=synthEvents(steps,length).length;
     let count=0;
@@ -96,16 +96,16 @@ function mutateSynth(steps,micro,length,mode,amount,rng){
     return;
   }
 }
-function mutateDrum(steps,micro,length,mode,amount,rng){
+function mutateDrum(steps,micro,length,mode,amount,rng,locked){
   if(mode==='SHIFT'){
     const events=shuffle(drumBits(steps,length),rng);
     const budget=Math.ceil(events.length*amount/100);
     let moved=0;
     for(const {step:i,lane} of events){
       if(moved>=budget)break;
-      if(i%16===0||!(steps[i].on&(1<<lane)))continue;
+      if(i%16===0||locked.has(i)||!(steps[i].on&(1<<lane)))continue;
       const j=shuffle([i-1,i+1],rng).find(j=>
-        j>=0&&j<length&&beats(i)===beats(j)&&!(steps[j].on&(1<<lane)));
+        j>=0&&j<length&&!locked.has(j)&&beats(i)===beats(j)&&!(steps[j].on&(1<<lane)));
       if(j===undefined)continue;
       relocateDrum(steps,i,j,lane);moved++;
     }
@@ -117,7 +117,7 @@ function mutateDrum(steps,micro,length,mode,amount,rng){
     for(const {step:i,lane} of events){
       if(added>=budget)break;
       const j=shuffle([i-1,i+1,i+2],rng).find(j=>
-        j>=0&&j<length&&bar(i)===bar(j)&&!(steps[j].on&(1<<lane))&&j%16!==0);
+        j>=0&&j<length&&!locked.has(j)&&bar(i)===bar(j)&&!(steps[j].on&(1<<lane))&&j%16!==0);
       if(j===undefined)continue;
       steps[j].on|=1<<lane;steps[j].lvl[lane]=steps[i].lvl[lane];
       steps[j].rat[lane]=steps[i].rat[lane];added++;
@@ -125,7 +125,7 @@ function mutateDrum(steps,micro,length,mode,amount,rng){
     return;
   }
   if(mode==='THIN'){
-    const events=shuffle(drumBits(steps,length).filter(({step})=>step%16!==0),rng);
+    const events=shuffle(drumBits(steps,length).filter(({step})=>step%16!==0&&!locked.has(step)),rng);
     const laneCount=Array(16).fill(0);
     for(const {lane} of drumBits(steps,length))laneCount[lane]++;
     const budget=Math.ceil(events.length*amount/140);
@@ -180,11 +180,15 @@ export function mutateExistingPattern({track,trackIndex,length,mode='SHIFT',amou
   const drums=trackIndex===3,source=drums?track.dstep:track.step;
   if(!Array.isArray(source)||source.length!==64)throw new TypeError('Native 64-step score missing');
   const steps=deep(source),micro=[...track.micro],rng=random(seed);
+  // Preserve the musical event underneath native per-step parameter locks.
+  // The locks themselves always remain untouched; a shifted/dropped event
+  // would otherwise leave automation behind on an unrelated REST.
+  const locked=new Set((track.locks||[]).map(l=>l.step));
   if(amount>0){
     if(mode==='ACCENT')updateAccent(steps,length,drums,amount,rng);
     else if(mode==='HUMANIZE')updateTiming(steps,micro,length,drums,amount,rng);
-    else if(drums)mutateDrum(steps,micro,length,mode,amount,rng);
-    else mutateSynth(steps,micro,length,mode,amount,rng);
+    else if(drums)mutateDrum(steps,micro,length,mode,amount,rng,locked);
+    else mutateSynth(steps,micro,length,mode,amount,rng,locked);
   }
   const changed=JSON.stringify(steps)!==JSON.stringify(source)||
     JSON.stringify(micro)!==JSON.stringify(track.micro);
