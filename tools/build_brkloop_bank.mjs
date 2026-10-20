@@ -32,6 +32,17 @@ if (lengthDesc.label !== 'LEN' || lengthDesc.min !== 1 || lengthDesc.max !== 64 
   throw new Error('SLOOP sequence descriptors changed; revise BRKLOOP UI mapping');
 const sequence = { length: {id:29, min:lengthDesc.min, max:lengthDesc.max, def:lengthDesc.def},
   division: {id:30, names:divisionDesc.names, def:divisionDesc.def}, maxSteps:64 };
+// Complete parameter metadata for the experimental Sound editor. Preserve the original
+// SLOOP numerical IDs, bounds and enum labels. The deployed V1 bank schema is extended
+// additively, so the existing production editor remains compatible.
+const desc = (d,id)=>({id,label:d.label,min:d.min,max:d.max,def:d.def,
+  names:Array.from(d.names||[]),unit:d.unit||''});
+const trackControls=[];
+for(let id=0;id<info.pe0;id++) trackControls.push(desc(E.parse[E.CMD.DESC](await request(E.req.desc(0,id))),id));
+const globalControls=[];
+for(let id=0;id<info.gcount;id++) globalControls.push(desc(E.parse[E.CMD.DESC](await request(E.req.desc(1,id))),id));
+if(trackControls.length!==63 || globalControls.length!==49)
+  throw new Error('SLOOP descriptor inventory changed: review Sound editor mappings');
 const engines = [];
 for (let k = 0; k < info.nengines; k++) {
   const names = E.parse[E.CMD.NAMES](await request(E.req.names(k))).names;
@@ -52,7 +63,7 @@ for (let k = 0; k < info.nengines; k++) {
 }
 await request(E.req.track(3));
 const kit = E.parse[E.CMD.DESC](await request(E.req.desc(0, info.pe0)));
-const bank = {format:'BRKLOOP_BANK_V1', source:'SLOOP 2.7.x', pe0:info.pe0, baseline, sequence, engines, kits:kit.names};
+const bank = {format:'BRKLOOP_BANK_V1', source:'SLOOP 2.7.x', pe0:info.pe0, baseline, sequence, trackControls, globalControls, engines, kits:kit.names};
 if (engines.reduce((n,e)=>n+e.presets.length,0) < 100 || bank.kits.length < 35) throw new Error('Incomplete extracted factory bank');
 mkdirSync('dist', {recursive:true});
 writeFileSync('dist/bank.json', JSON.stringify(bank));
