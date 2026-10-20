@@ -29,7 +29,8 @@ for(const t of seed.tracks){
 }
 const session=createResearchEditSession(seed);
 const modeForTrack=['step','step','step','step'];
-let tool='select',octave=3,selectedPitch=60,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
+let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
+let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
 function soundState(){return session.getState();}
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
 function status(message){$('status').textContent=message;}
@@ -51,41 +52,106 @@ function selectStep(step){
   const {v}=current();
   session.select(v.track,step);render();
 }
+
+async function ensureAudio(){
+  if(!player)player=new LocalPreview(soundState,e=>status(e.message));
+  await player.start();
+}
+async function audition(note,trackId=current().v.track){
+  try{
+    await ensureAudio();
+    player.note(trackId,note,true);
+    setTimeout(()=>player?.note(trackId,note,false),150);
+  }catch(e){status(e.message);}
+}
 function midiKey(note){
   selectedPitch=note;
   const {v}=current();
   if(v.track===3)return;
+  if(workspaceTab==='sound'){
+    void audition(note,v.track);
+    renderKeyboard();return;
+  }
   if(chord){
     if(chordNotes.includes(note))chordNotes=chordNotes.filter(n=>n!==note);
     else if(chordNotes.length<4)chordNotes.push(note);
-    else{status('SLOOP allows four notes per step');renderKeyboard();return;}
+    else{status('Maximum four notes per step');renderKeyboard();return;}
     renderKeyboard();return;
   }
   if(commit({type:'writeNote',track:v.track,step:v.step,note}))advance();
-  if(player){
-    player.note(v.track,note,true);
-    setTimeout(()=>player?.note(v.track,note,false),150);
-  }
+  if(player)void audition(note,v.track);
 }
+// There is no edit-tool switch: empty cells are writable by one tap in either
+// editor. A populated piano-roll note is selected, while a touch long-press
+// or mouse context menu removes it. Dedicated ERASE stays close to the canvas.
 function drawAt(step,pitchOrLane){
   const {v,track}=current();
+  const wasSelected=v.step===step;
   session.select(v.track,step);
-  if(tool==='select'){selectedPitch=pitchOrLane??selectedPitch;render();return;}
   if(v.track===3){
     drumLane=pitchOrLane??drumLane;
-    if(tool==='draw'&&!(track.dstep[step].on&(1<<drumLane)))
-      commit({type:'toggleDrumHit',track:v.track,step,lane:drumLane});
-    else if(tool==='erase'&&(track.dstep[step].on&(1<<drumLane)))
-      commit({type:'toggleDrumHit',track:v.track,step,lane:drumLane});
-    else render();
-  }else if(tool==='draw'){
-    selectedPitch=pitchOrLane??selectedPitch;
-    commit({type:'addNote',track:v.track,step,note:selectedPitch});
-  }else {
-    selectedPitch=pitchOrLane??selectedPitch;
-    if(pitchOrLane!=null)commit({type:'removeNote',track:v.track,step,note:pitchOrLane});
-    else commit({type:'clearNotes',track:v.track,step});
+    commit({type:'toggleDrumHit',track:v.track,step,lane:drumLane});
+    return;
   }
+  if(pitchOrLane!==null && pitchOrLane!==undefined){
+    selectedPitch=pitchOrLane;
+    const synth=track.step[step];
+    const present=synth.time===0&&synth.notes.slice(0,synth.n).includes(pitchOrLane);
+    if(present){render();return;}
+    commit({type:'addNote',track:v.track,step,note:pitchOrLane});
+    return;
+  }
+  const synth=track.step[step];
+  if(synth.n>0 && synth.time===0){render();return;}
+  commit({type:'writeNote',track:v.track,step,note:selectedPitch});
+  if(auto && !wasSelected)advance();
+}
+function eraseSelected(){
+  const {v,track}=current();
+  if(v.track===3){
+    if(track.dstep[v.step].on&(1<<drumLane))
+      commit({type:'toggleDrumHit',track:v.track,step:v.step,lane:drumLane});
+  }else if(v.mode==='roll'){
+    const synth=track.step[v.step],p=selectedPitch;
+    if(synth.time===0&&synth.notes.slice(0,synth.n).includes(p))
+      commit({type:'removeNote',track:v.track,step:v.step,note:p});
+  }else commit({type:'clearNotes',track:v.track,step:v.step});
+}
+function bindLongPressErase(button,step,pitchOrLane){
+  let timer=null,origin=null,suppress=false;
+  const cancel=()=>{if(timer){clearTimeout(timer);timer=null;}origin=null;};
+  button.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    origin={x:e.clientX,y:e.clientY};
+    timer=setTimeout(()=>{
+      timer=null;suppress=true;
+      session.select(current().v.track,step);
+      if(current().v.track===3){
+        const t=current().track.dstep[step];
+        if(t.on&(1<<pitchOrLane))commit({type:'toggleDrumHit',track:3,step,lane:pitchOrLane});
+      }else{
+        const t=current().track.step[step];
+        if(t.time===0&&t.notes.slice(0,t.n).includes(pitchOrLane))
+          commit({type:'removeNote',track:current().v.track,step,note:pitchOrLane});
+      }
+      status('Note erased · Undo available');
+    },480);
+  });
+  button.addEventListener('pointermove',e=>{
+    if(origin&&Math.hypot(e.clientX-origin.x,e.clientY-origin.y)>10)cancel();
+  });
+  button.addEventListener('pointercancel',cancel);
+  button.addEventListener('pointerup',cancel);
+  button.addEventListener('contextmenu',e=>{
+    e.preventDefault();cancel();suppress=true;
+    session.select(current().v.track,step);
+    const v=current().v,track=current().track;
+    if(v.track===3){
+      if(track.dstep[step].on&(1<<pitchOrLane))commit({type:'toggleDrumHit',track:3,step,lane:pitchOrLane});
+    }else if(track.step[step].time===0&&track.step[step].notes.slice(0,track.step[step].n).includes(pitchOrLane))
+      commit({type:'removeNote',track:v.track,step,note:pitchOrLane});
+  });
+  return ()=>{if(suppress){suppress=false;return true;}return false;};
 }
 function renderTracks(){
   const {v}=current(),container=$('tracks');
@@ -93,7 +159,7 @@ function renderTracks(){
   trackNames.forEach((name,k)=>{
     const b=newEl('button','track'+(v.track===k?' active':''));
     b.append(newEl('small','',String(k+1).padStart(2,'0')),newEl('strong','',name));
-    b.append(newEl('span','',k===3?'16 LANES':'12 SYNTH ENGINES'));
+    b.append(newEl('span','',k===3?(bank.kits[session.getState().tracks[3].p[bank.pe0]]||'16 lanes'):(bank.engines[session.getState().tracks[k].engine]?.presets[session.getState().tracks[k].preset]?.name||'CUSTOM')));
     b.addEventListener('click',()=>{
       session.select(k,Math.min(v.step,clamp(session.getState().tracks[k].p[29],1,64)-1));
       session.setMode(modeForTrack[k]);chord=false;chordNotes=[];render();
@@ -113,7 +179,10 @@ function renderOptions(){
   select.value=String(track.p[30]);
   $('auto').checked=auto;
   for(const m of ['step','roll'])$(m+'-mode').setAttribute('aria-pressed',String(v.mode===m));
-  document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tool===tool)));
+  $('roll-pitch-nav').hidden=v.mode!=='roll' || v.track===3;
+  $('roll-range').textContent='C'+rollOctave+'–B'+rollOctave;
+  $('edit-hint').textContent=v.mode==='roll' ? 'Tap empty cell to add a note. Hold a note or right-click to erase.' : 'Tap empty step to write highlighted pitch. Piano keys replace selected step.';
+  $('quick-erase').textContent=v.mode==='roll'?'⌫ ERASE NOTE':'⌫ ERASE STEP';
   const history=session.history();
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
@@ -143,33 +212,43 @@ function renderStep(){
     canvas.append(section);
   }
 }
+
 function renderRoll(){
   const {v,track}=current(),length=clamp(track.p[29],1,64),drums=v.track===3;
-  const canvas=$('grid');canvas.replaceChildren();
-  const scroll=newEl('div','roll-scroll');
-  const grid=newEl('div','roll-grid');
-  grid.style.gridTemplateColumns='52px repeat('+length+',38px)';
-  grid.append(newEl('div','roll-corner','NOTE'));
+  const canvas=$('grid'),prior=canvas.querySelector('.roll-scroll');
+  if(prior)rollScroll={left:prior.scrollLeft,top:prior.scrollTop};
+  canvas.replaceChildren();
+  const scroll=newEl('div','roll-scroll'),grid=newEl('div','roll-grid');
+  grid.style.gridTemplateColumns='56px repeat('+length+',42px)';
+  grid.append(newEl('div','roll-corner',drums?'DRUM':'NOTE'));
   for(let i=0;i<length;i++)grid.append(newEl('div','roll-step',String(i+1)));
-  const lines=drums?Array.from({length:16},(_,i)=>i):Array.from({length:24},(_,i)=>71-i);
+  // Octave bank, not an endlessly vertically scrolling two-octave sheet.
+  // Every MIDI pitch is reachable via +/- in the always-visible header.
+  const base=(rollOctave+1)*12;
+  const lines=drums?Array.from({length:16},(_,i)=>i):
+    Array.from({length:12},(_,i)=>base+11-i);
   for(const row of lines){
     grid.append(newEl('div','roll-note-label',drums?laneNames[row]:noteName(row)));
     for(let i=0;i<length;i++){
-      const s=drums?track.dstep[i]:track.step[i];
-      const active=drums?!!(s.on&(1<<row)):s.n>0&&s.time===0&&s.notes.slice(0,s.n).includes(row);
+      const t=drums?track.dstep[i]:track.step[i];
+      const active=drums?!!(t.on&(1<<row)):t.n>0&&t.time===0&&t.notes.slice(0,t.n).includes(row);
       const b=newEl('button','roll-cell'+(i%4===0?' beat':'')+(active?' on':'')+
         (i===v.step && (drums?drumLane===row:selectedPitch===row)?' selected':''));
       b.dataset.step=String(i);b.dataset.note=String(row);
       b.setAttribute('aria-label',drums?'Step '+(i+1)+' '+laneNames[row]:'Step '+(i+1)+' '+noteName(row));
       b.setAttribute('aria-pressed',String(active));
       b.textContent=active?'●':'';
-      b.addEventListener('click',()=>drawAt(i,row));
+      const suppressed=bindLongPressErase(b,i,row);
+      b.addEventListener('click',()=>{
+        if(suppressed())return;
+        drawAt(i,row);
+      });
       grid.append(b);
     }
   }
   scroll.append(grid);canvas.append(scroll);
-  const active=scroll.querySelector('.roll-cell.selected');
-  if(active)active.scrollIntoView({block:'nearest',inline:'nearest'});
+  scroll.scrollLeft=rollScroll.left;scroll.scrollTop=rollScroll.top;
+  scroll.addEventListener('scroll',()=>{rollScroll={left:scroll.scrollLeft,top:scroll.scrollTop};},{passive:true});
 }
 function renderInspector(){
   const {v,track}=current();$('selected').textContent=String(v.step+1).padStart(2,'0');
@@ -187,13 +266,13 @@ function renderKeyboard(){
   $('chord').hidden=v.track===3;
   $('chord').setAttribute('aria-pressed',String(chord));
   $('chord-done').hidden=!chord;$('chord-cancel').hidden=!chord;
-  $('chord-preview').textContent=chord?'CHORD: '+(chordNotes.map(noteName).join(' + ')||'tap notes, then Done'):'Tap keys to write selected step; AUTO advances after each note.';
+  $('chord-preview').textContent=chord?'CHORD: '+(chordNotes.map(noteName).join(' + ')||'tap notes, then Done'):workspaceTab==='sound'?'Tap keys to audition the current sound.':'Tap keys to write selected step, or tap an empty step to stamp highlighted pitch.';
   if(v.track===3){
     const pads=newEl('div','step-row');
     laneNames.forEach((name,i)=>{
       const b=newEl('button','step-cell'+(i===drumLane?' selected':''));
       b.textContent=name;b.dataset.lane=String(i);
-      b.addEventListener('click',()=>{drumLane=i;render();});
+      b.addEventListener('click',()=>{drumLane=i;render();if(player)player.hit(current().track.p[bank.pe0],i,100);});
       pads.append(b);
     });kb.append(pads);kb.style.height='auto';return;
   }
