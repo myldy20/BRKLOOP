@@ -53,9 +53,12 @@ export function generateMelodicIdea({
   const steps=Array.from({length:64},rest);
   const barCount=Math.ceil(length/16),events=[];
   for(let bar=0;bar<barCount;bar++){
-    const degree=degrees[bar%degrees.length],rootNote=(role==='BASS'?48:60)+root+degreeSemitone(notes,degree);
-    const triad=[0,2,4].map(offset=>
-      (role==='BASS'?48:60)+root+degreeSemitone(notes,degree+offset));
+    const degree=degrees[bar%degrees.length];
+    // Keep each chord root in C3–B3 for bass / C4–B4 for chords and arps,
+    // rather than letting successive scale degrees leap into new octaves.
+    const degreeRoot=degreeSemitone(notes,degree);
+    const rootNote=(role==='BASS'?48:60)+(root+degreeRoot)%12;
+    const triad=[0,2,4].map(offset=>rootNote+degreeSemitone(notes,degree+offset)-degreeRoot);
     let arpIndex=(bar+(seed%3))%3;
     for(const tick of attacks[role][rhythm]){
       const index=bar*16+tick;
