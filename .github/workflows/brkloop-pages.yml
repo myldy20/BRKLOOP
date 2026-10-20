@@ -93,6 +93,12 @@ jobs:
           path: ui-shots
           if-no-files-found: ignore
           retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: brkloop-hybrid-standalone-preview
+          path: dist/site/
+          retention-days: 7
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
