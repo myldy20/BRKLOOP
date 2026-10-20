@@ -33,7 +33,7 @@
 </section>
 <aside class="inspector" id="inspector"><div class="label">SELECTED STEP</div><div class="selected" id="selected">01</div><div id="notes">Tap a step, then a key.</div><div class="inspector-actions"><button id="rest">REST</button><button id="tie">TIE</button><button id="clear">CLEAR</button></div><label>Velocity <input type="range" id="velocity" min="1" max="127" value="96"></label><output id="velocity-value">96</output><div class="hint">Selection, editing and Undo are shared by Step and Roll.</div></aside>
 </main>
-<div class="keyboard-area">
+<div class="keyboard-area" id="keyboard-area">
 <div class="keys-head"><div><small>LIVE KEYBOARD</small><strong id="key-label">C3 – C4</strong></div><div><button id="toggle-keyboard" aria-pressed="true">HIDE KEYS</button><button id="oct-down" aria-label="Octave down">−</button><button id="oct-up" aria-label="Octave up">+</button><button id="chord" aria-pressed="false">CHORD</button><button id="chord-done" hidden>Done</button><button id="chord-cancel" hidden>Cancel</button></div></div>
 <div id="keyboard" class="keyboard"></div>
 <div id="chord-preview" class="hint"></div>
