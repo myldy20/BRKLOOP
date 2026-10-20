@@ -36,66 +36,125 @@ try{
     await page.locator('.step-cell[data-step="0"]').waitFor();
     assert.equal(await page.locator('.step-cell').count(),16,'Starts at native LEN=16');
     assert.equal(await page.locator('#step-mode').getAttribute('aria-pressed'),'true');
+    // Direct note entry: no Select/Draw/Erase mode switches.
+    assert.equal(await page.locator('[data-tool]').count(),0,'No edit tool mode required');
     await page.locator('.step-cell[data-step="0"]').click();
-    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·','Selecting step never silently inserts a note');
-    await page.locator('.piano-key[data-note="48"]').click();
-    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3','Keyboard writes immediately');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3',
+      'One tap on empty STEP places currently highlighted pitch');
+    await page.locator('.piano-key[data-note="52"]').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
+      'Piano key writes selected step directly');
+    await page.locator('.step-cell[data-step="1"]').click();
+    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3',
+      'Step Write stamps pitch with one tap');
     await page.locator('#roll-mode').click();
-    assert.equal(await page.locator('.roll-cell[data-step="0"][data-note="48"]').getAttribute('aria-pressed'),'true',
-      'STEP writes appear immediately in ROLL');
-    await page.locator('[data-tool="draw"]').click();
-    await page.locator('.roll-cell[data-step="1"][data-note="52"]').click();
-    assert.equal(await page.locator('.roll-cell[data-step="1"][data-note="52"]').getAttribute('aria-pressed'),'true',
-      'ROLL writes a new pitch to native SLOOP step');
-    await page.locator('#undo').click();
-    assert.equal(await page.locator('.roll-cell[data-step="1"][data-note="52"]').getAttribute('aria-pressed'),'false');
-    await page.locator('#redo').click();
+    assert.equal(await page.locator('#roll-range').textContent(),'C3–B3','Octave bank shown above roll');
     assert.equal(await page.locator('.roll-cell[data-step="1"][data-note="52"]').getAttribute('aria-pressed'),'true');
+    await page.locator('.roll-cell[data-step="2"][data-note="55"]').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'true',
+      'One tap empty Piano Roll inserts a note without draw mode');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'false');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'true');
+    await page.locator('.roll-cell[data-step="2"][data-note="55"]').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'true',
+      'Selecting existing note must not erase');
+    await page.locator('#quick-erase').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'false',
+      'Inline erase must be available without scrolling away to choose tool');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.roll-cell[data-step="2"][data-note="55"]').getAttribute('aria-pressed'),'true');
+    await page.locator('#roll-up').click();
+    assert.equal(await page.locator('#roll-range').textContent(),'C4–B4');
+    await page.locator('.roll-cell[data-step="3"][data-note="60"]').click();
+    assert.equal(await page.locator('.roll-cell[data-step="3"][data-note="60"]').getAttribute('aria-pressed'),'true');
+    await page.locator('#roll-down').click();
+    assert.equal(await page.locator('#roll-range').textContent(),'C3–B3');
     await page.locator('#step-mode').click();
-    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3','ROLL writes persist in STEP');
+    assert.equal(await page.locator('.step-cell[data-step="2"] .pitch').textContent(),'G3');
+    assert.equal(await page.locator('.step-cell[data-step="3"] .pitch').textContent(),'C4',
+      'Octave bank changes only view, not native notes');
+    // Atomic chord insert: an existing note stays unless explicitly removed.
+    await page.locator('.step-cell[data-step="1"]').click();
     await page.locator('#chord').click();
     await page.locator('.piano-key[data-note="55"]').click();
     await page.locator('.piano-key[data-note="59"]').click();
     await page.locator('#chord-done').click();
-    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3 + G3 + B3','Chord one commit');
+    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3 + G3 + B3');
     await page.locator('#undo').click();
-    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3','One Undo removes whole chord addition');
-    await page.locator('[data-tool="select"]').click();
+    assert.equal(await page.locator('.step-cell[data-step="1"] .pitch').textContent(),'E3',
+      'Chord Undo must revert one transaction');
+
     await page.locator('#length').fill('64');await page.locator('#length').press('Tab');
     assert.equal(await page.locator('.step-cell').count(),64);
     await page.locator('.step-cell[data-step="63"]').click();
-    await page.locator('.piano-key[data-note="48"]').click();
-    assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'C3');
+    assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'B3',
+      'STEP places latest selected pitch without entering Draw');
     await page.locator('#length').fill('16');await page.locator('#length').press('Tab');
     assert.equal(await page.locator('.step-cell').count(),16);
     await page.locator('#length').fill('64');await page.locator('#length').press('Tab');
-    assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'C3',
-      'Non-destructive shortening preserves hidden step 64');
+    assert.equal(await page.locator('.step-cell[data-step="63"] .pitch').textContent(),'B3',
+      'Length shrink must preserve step 64');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-step.png',fullPage:true});
     await page.locator('#roll-mode').click();
-    assert.equal(await page.locator('.roll-cell[data-step="63"][data-note="48"]').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('.roll-cell[data-step="63"][data-note="59"]').getAttribute('aria-pressed'),'true');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-roll.png',fullPage:true});
     await page.locator('#tracks button').last().click();
     await page.locator('#roll-mode').click();
-    await page.locator('[data-tool="draw"]').click();
     await page.locator('.roll-cell[data-step="0"][data-note="0"]').click();
     assert.equal(await page.locator('.roll-cell[data-step="0"][data-note="0"]').getAttribute('aria-pressed'),'true',
-      'Drum ROLL writes lane 0');
+      'Drum Roll one-tap hit input');
     await page.locator('#step-mode').click();
-    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●',
-      'Drum native hit is shared across both editors');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-drums.png',fullPage:true});
-    // One real browser audio start/stop smoke check: the research canvas shares
-    // the original SLOOP AudioWorklet, never a synthetic oscillator.
+    // SOUND: native metadata-driven factory sound and controls on the same track.
+    await page.locator('#tracks button').first().click();
+    await page.locator('#sound-tab').click();
+    assert.equal(await page.locator('#sound-panel').isVisible(),true);
+    assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    assert.equal(await page.locator('#engine-select option').count(),12);
+    assert.equal(await page.locator('#preset-select option').count()>=3,true);
+    await page.locator('#engine-select').selectOption('1');
+    assert.equal(await page.locator('#engine-select').inputValue(),'1');
+    await page.locator('#preset-select').selectOption('1');
+    assert.equal(await page.locator('#preset-select').inputValue(),'1');
+    assert.equal(await page.locator('#sound-macros .sound-control').count()>1,true);
+    assert.equal(await page.locator('#sound-shape .sound-control').count()>1,true);
+    assert.equal(await page.locator('#sound-fx .sound-control').count()>1,true);
+    // Change a live DSP slider/enum and verify Undo applies in Sound too.
+    const firstRange=page.locator('#sound-macros input[type=range]').first();
+    if(await firstRange.count()){
+      const original=await firstRange.inputValue();
+      const max=Number(await firstRange.getAttribute('max'));
+      const min=Number(await firstRange.getAttribute('min'));
+      const wanted=String(Number(original)===max?min:max);
+      await firstRange.fill(wanted);
+      await firstRange.dispatchEvent('change');
+      assert.equal(await page.locator('#sound-macros input[type=range]').first().inputValue(),wanted);
+      await page.locator('#undo').click();
+      assert.equal(await page.locator('#sound-macros input[type=range]').first().inputValue(),original);
+    }
+    await page.locator('#all-params summary').click();
+    assert.equal(await page.locator('#param-count').textContent(),'63');
+    assert.equal(await page.locator('#sound-advanced-controls .sound-control').count()>35,true);
+    await page.locator('#all-globals summary').click();
+    assert.equal(await page.locator('#global-count').textContent(),'49');
+    assert.equal(await page.locator('#sound-global-controls .sound-control').count()>10,true);
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-sound.png',fullPage:true});
+    // One real browser audio start/stop smoke check; audio doesn't use a second oscillator.
     await page.locator('#play').click();
     await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING / SLOOP WASM'),
       {timeout:15000});
     await page.locator('#stop').click();
     assert.equal(await page.locator('#status').textContent(),'STOPPED');
+    await page.locator('#pattern-tab').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
+      'Changing factory sound never erases notes');
     const widths=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,view:innerWidth}));
     assert(widths.doc<=widths.view+1,'Unintended page horizontal overflow '+JSON.stringify(widths));
     assert.deepEqual(failures,[],d.name+' JavaScript console exceptions');
     await context.close();
-    console.log('PASS '+d.name+': equal STEP/ROLL note/chord/drums, Undo, 64-step and responsive layout');
+    console.log('PASS '+d.name+': direct STEP/ROLL input, Sound UI, Undo, 64 steps and live SLOOP WASM');
   }
 }finally{await browser?.close();await new Promise(r=>server.close(r));}
