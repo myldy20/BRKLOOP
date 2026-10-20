@@ -34,6 +34,16 @@ try{
     await page.waitForURL('**/research/hybrid-editor/');
     assert(page.url().includes('/research/hybrid-editor/'),'Public /preview/ must open the actual editor');
     await page.locator('.step-cell[data-step="0"]').waitFor();
+    const nativeBank=await page.evaluate(async()=>await (await fetch('../../bank-preview-v2.json')).json());
+    assert.equal(nativeBank.engines.reduce((n,e)=>n+e.presets.length,0),153,'All compiled firmware sounds must be in Preview');
+    const wobble=nativeBank.engines[0].presets.find(x=>x.name==='WOBBLE');
+    assert.equal(wobble.index,7);
+    assert.equal(wobble.p[9],74);assert.equal(wobble.p[14],40);assert.equal(wobble.p[28],-24);
+    assert.equal(await page.locator('#bpm').inputValue(),'90');
+    await page.locator('#bpm').fill('140');await page.locator('#bpm').press('Tab');
+    assert.equal(await page.locator('#bpm').inputValue(),'140');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#bpm').inputValue(),'90','Tempo participates in shared Undo');
     assert.equal(await page.locator('.step-cell').count(),16,'Starts at native LEN=16');
     assert.equal(await page.locator('#step-mode').getAttribute('aria-pressed'),'true');
     // Direct note entry: no Select/Draw/Erase mode switches.
@@ -115,6 +125,13 @@ try{
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
     assert.equal(await page.locator('#engine-select option').count(),12);
     assert.equal(await page.locator('#preset-select option').count()>=3,true);
+    // Native WOBBLE must expose the exact LFO/tuning state absent from old mock.
+    const lfo=await page.locator('#sound-lfo .sound-control').count();
+    assert(lfo>=10,'Expose native SLOOP LFO controls in grouped Sound section');
+    const initialPitch=await page.locator('#sound-shape .sound-control').filter({hasText:'TRN'}).locator('input').inputValue();
+    assert.equal(initialPitch,'-24','Firmware WOBBLE transpose is -24');
+    const lfoFilter=await page.locator('#sound-lfo .sound-control').filter({hasText:'14 / FLT'}).locator('input').inputValue();
+    assert.equal(lfoFilter,'40','Firmware WOBBLE LFO FILTER depth is 40');
     await page.locator('#engine-select').selectOption('1');
     assert.equal(await page.locator('#engine-select').inputValue(),'1');
     await page.locator('#preset-select').selectOption('1');
@@ -162,6 +179,6 @@ try{
     assert(widths.doc<=widths.view+1,'Unintended page horizontal overflow '+JSON.stringify(widths));
     assert.deepEqual(failures,[],d.name+' JavaScript console exceptions');
     await context.close();
-    console.log('PASS '+d.name+': direct STEP/ROLL input, Sound UI, Undo, 64 steps and live SLOOP WASM');
+    console.log('PASS '+d.name+': native 153-bank/WOBBLE, tempo Undo, STEP/ROLL, Sound and real SLOOP WASM');
   }
 }finally{await browser?.close();await new Promise(r=>server.close(r));}
