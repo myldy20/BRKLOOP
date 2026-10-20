@@ -153,6 +153,9 @@ try{
     await page.locator('#stop').click();
     assert.equal(await page.locator('#status').textContent(),'STOPPED');
     await page.locator('#pattern-tab').click();
+    // Returning from SOUND must retain the track's previously selected ROLL mode.
+    assert.equal(await page.locator('#roll-mode').getAttribute('aria-pressed'),'true');
+    await page.locator('#step-mode').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
       'Changing factory sound never erases notes');
     const widths=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,view:innerWidth}));
