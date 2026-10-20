@@ -50,6 +50,7 @@ jobs:
           node --check web/preview-worklet.js
           node --check research/shared-edit-commands.mjs
           node --check research/hybrid-editor/prototype.js
+          node --check research/hybrid-editor/panel-pitch.mjs
           test -s dist/bank.json
           test -s dist/audit/bank-v2-candidate.json
           test -s build/preview/sloop-preview.wasm
@@ -64,7 +65,7 @@ jobs:
           cp LICENSE LICENSING.md dist/site/
           cp preview/index.html dist/site/preview/
           cp research/shared-edit-commands.mjs dist/site/research/
-          cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js dist/site/research/hybrid-editor/
+          cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js research/hybrid-editor/panel-pitch.mjs dist/site/research/hybrid-editor/
           touch dist/site/.nojekyll
       - name: Browser regression (phone + desktop)
         run: |
