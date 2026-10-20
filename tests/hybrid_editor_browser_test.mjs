@@ -118,6 +118,34 @@ try{
     await page.locator('#step-mode').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-drums.png',fullPage:true});
+    // Groove ideas: visual/audio preview is nondestructive; APPLY is one Undo.
+    assert.equal(await page.locator('#groove-panel').isVisible(),true);
+    assert.equal(await page.locator('#groove-apply').isDisabled(),true);
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'·');
+    await page.locator('#groove-style').selectOption('HOUSE');
+    await page.locator('#groove-preview').click();
+    assert.equal(await page.locator('#groove-apply').isEnabled(),true);
+    assert.equal(await page.locator('#groove-meta').textContent().then(s=>s.includes('DRAFT #1')),true);
+    assert.equal(await page.locator('.groove-mini-cell[data-part="SNARE"][data-step="4"]').evaluate(e=>e.classList.contains('on')),true);
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'·',
+      'Preview must not commit pattern until Apply');
+    await page.locator('#groove-next').click();
+    assert.equal(await page.locator('#groove-meta').textContent().then(s=>s.includes('DRAFT #2')),true);
+    await page.locator('#groove-cancel').click();
+    assert.equal(await page.locator('#groove-apply').isDisabled(),true);
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'·',
+      'Cancel must preserve original drum pattern');
+    await page.locator('#groove-preview').click();
+    await page.locator('#groove-apply').click();
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'●',
+      'Groove Apply must commit generated kit to original SLOOP pattern');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'·',
+      'One Undo restores previous native drum sequence');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'●');
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-grooves.png',fullPage:true});
+
     // SOUND uses a focused synth workflow and keeps complete source metadata in ALL.
     await page.locator('#tracks button').first().click();
     await page.locator('#sound-tab').click();
