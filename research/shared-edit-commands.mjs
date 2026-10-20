@@ -40,6 +40,30 @@ function apply(data,cmd){
   const t=trackAt(data,trackId);
   if(type==='setLength'){t.p[29]=integer(cmd.length,1,64,'LEN');return;}
   if(type==='setDivision'){t.p[30]=integer(cmd.division,0,8,'DIV');return;}
+  // Sound controls remain native SLOOP parameters; changes participate in
+  // the same undo history as Step Write and Piano Roll.
+  if(type==='setTrackParam'){
+    const id=integer(cmd.param,0,t.p.length-1,'parameter');
+    t.p[id]=integer(cmd.value,-32768,32767,'parameter value');return;
+  }
+  if(type==='setFactorySound'){
+    if(trackId===3)throw Error('Use drum kit selection on the drum track');
+    if(!Array.isArray(cmd.p)||!Array.isArray(cmd.fm6)||cmd.p.length!==t.p.length||cmd.fm6.length!==t.fm6.length)
+      throw Error('Factory sound state is incompatible with native SLOOP');
+    integer(cmd.engine,0,11,'engine');
+    integer(cmd.preset,0,32767,'preset');
+    // Match original BRKLOOP: keep per-track level, tuning, length, DIV,
+    // mixer, mute and performance settings when changing sound.
+    const kept=[0,25,26,27,29,30,31,32,39,40,49];
+    const previous=kept.map(id=>t.p[id]);
+    t.engine=cmd.engine;t.preset=cmd.preset;t.p=copy(cmd.p);t.fm6=copy(cmd.fm6);
+    kept.forEach((id,j)=>{t.p[id]=previous[j];});
+    return;
+  }
+  if(type==='setGlobalParam'){
+    const id=integer(cmd.param,0,data.g.length-1,'global parameter');
+    data.g[id]=integer(cmd.value,-32768,32767,'global value');return;
+  }
   stepAt(t,i);
   if(['writeChord','writeNote','addNote','removeNote','clearNotes','setGate','setVelocity'].includes(type)){
     if(trackId===3)throw Error('Synth command on drum track');
