@@ -34,6 +34,43 @@
   </div>
   <div class="groove-visual" id="groove-visual" aria-label="Non-destructive drum groove preview"></div>
 </section>
+<section class="melody-panel" id="melody-panel" aria-label="Bass chords and arpeggio ideas">
+  <div class="melody-top">
+    <div><small>IDEAS / MELODIC PART</small><strong>Build a part</strong>
+      <p>Uses your selected native SLOOP instrument. Preview does not change the score; Apply creates one Undo step.</p>
+    </div>
+    <span class="melody-length-hint" id="melody-length-hint">LEN 16 · 1 BAR</span>
+  </div>
+  <div class="melody-controls">
+    <label>PART<select id="melody-role" aria-label="Musical part">
+      <option value="BASS">BASS</option><option value="CHORD">CHORDS</option><option value="ARP">ARPEGGIO</option>
+    </select></label>
+    <label>ROOT<select id="melody-root" aria-label="Root key">
+      <option value="0">C</option><option value="1">C♯</option><option value="2">D</option><option value="3">D♯</option>
+      <option value="4">E</option><option value="5">F</option><option value="6">F♯</option><option value="7">G</option>
+      <option value="8">G♯</option><option value="9">A</option><option value="10">A♯</option><option value="11">B</option>
+    </select></label>
+    <label>MODE<select id="melody-scale" aria-label="Musical scale">
+      <option value="MINOR">MINOR</option><option value="MAJOR">MAJOR</option>
+    </select></label>
+    <label>CHORDS<select id="melody-progression" aria-label="Chord progression">
+      <option value="MINOR">i–VI–III–VII</option><option value="POP">I–V–vi–IV</option>
+      <option value="CYCLE">I–vi–IV–V</option><option value="RISE">I–IV–V–vi</option>
+    </select></label>
+    <label>RHYTHM<select id="melody-rhythm" aria-label="Pattern rhythm">
+      <option value="STRAIGHT">STRAIGHT</option><option value="SPARSE">SPARSE</option>
+      <option value="SYNCOPATED">SYNCOPATED</option>
+    </select></label>
+  </div>
+  <div class="groove-actions">
+    <button id="melody-preview" type="button">PREVIEW</button>
+    <button id="melody-next" type="button">NEXT VARIATION</button>
+    <button id="melody-apply" type="button" disabled>APPLY</button>
+    <button id="melody-cancel" type="button" disabled>CANCEL</button>
+    <span id="melody-meta" role="status" aria-live="polite">No preview · Press Play to hear generated parts.</span>
+  </div>
+  <div class="melody-visual" id="melody-visual" aria-label="Non-destructive melodic idea preview"></div>
+</section>
 <div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
   <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
 </section>
