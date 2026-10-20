@@ -9,3 +9,5 @@ mkdir -p build/host
 CC="${CC:-$(command -v clang || echo cc)}"
 "$CC" -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src tests/preview_native.c -o build/host/preview_native
 node tests/preview_test.mjs
+"$CC" -O2 -fwrapv -fno-strict-aliasing -w -Ibuild/gen -Ifirmware/src tests/preview_continuation_native.c -o build/host/preview_continuation_native
+node tests/preview_continuation_test.mjs
