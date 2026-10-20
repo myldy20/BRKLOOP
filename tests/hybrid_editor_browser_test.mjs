@@ -152,8 +152,8 @@ try{
     await page.evaluate(()=>{
       const range=document.querySelector('#sound-lfo .sound-control[data-param="14"] input');
       window.draggedFilterNode=range;
-      range.value='66';range.dispatchEvent(new Event('input',{bubbles:true}));
-      range.value='88';range.dispatchEvent(new Event('input',{bubbles:true}));
+      range.value='54';range.dispatchEvent(new Event('input',{bubbles:true}));
+      range.value='61';range.dispatchEvent(new Event('input',{bubbles:true}));
     });
     const live=await page.evaluate(()=>({
       moves:window.liveParamMessages,
@@ -161,15 +161,15 @@ try{
       current:window.draggedFilterNode.value
     }));
     assert.deepEqual(live.moves.map(x=>x.slice(0,2)),[[0,14],[0,14]],'Live updates reach audio on every input');
-    assert.equal(live.moves.at(-1)[2],88);
+    assert.equal(live.moves.at(-1)[2],61);
     assert.equal(live.connected,true,'Dragging must NOT rebuild/replace the control node');
-    assert.equal(live.current,'88');
+    assert.equal(live.current,'61');
     await nativeFilter.dispatchEvent('change');
-    assert.equal(await nativeFilter.inputValue(),'88');
+    assert.equal(await nativeFilter.inputValue(),'61');
     await page.locator('#undo').click();
     assert.equal(await nativeFilter.inputValue(),'40','Whole drag reverts in one Undo');
     await page.locator('#redo').click();
-    assert.equal(await nativeFilter.inputValue(),'88','Redo restores final live setting');
+    assert.equal(await nativeFilter.inputValue(),'61','Redo restores final live setting');
 
     await page.locator('#sound-pages button[data-sound-page="envelope"]').click();
     assert.equal(await page.locator('#sound-envelope .sound-control').count(),5);
