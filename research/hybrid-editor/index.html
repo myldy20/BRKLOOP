@@ -245,7 +245,33 @@
     <label id="engine-wrap">ENGINE<select id="engine-select" aria-label="Sound engine"></select></label>
     <label id="preset-wrap">FACTORY SOUND<select id="preset-select" aria-label="Factory preset"></select></label>
     <label id="kit-wrap" hidden>DRUM KIT<select id="kit-select" aria-label="Drum kit"></select></label>
+    <button type="button" id="sound-browse-open" aria-expanded="false" aria-controls="sound-browser">BROWSE SOUNDS <span id="sound-favorite-count"></span></button>
   </div>
+  <section class="sound-browser" id="sound-browser" aria-label="Factory sound browser" hidden>
+    <div class="browser-top">
+      <div><strong>FIND A SOUND</strong><p>Search across the original SLOOP factory bank. Audition first; Use commits one Undo.</p></div>
+      <button type="button" id="sound-browse-close" aria-label="Close sound browser">✕</button>
+    </div>
+    <div class="browser-filters">
+      <label>SEARCH<input type="search" id="sound-browser-query" placeholder="wobble, bass, pad, lead…" autocomplete="off" aria-label="Search factory sounds"></label>
+      <label id="sound-browser-engine-wrap">ENGINE<select id="sound-browser-engine" aria-label="Filter sounds by engine"></select></label>
+      <button type="button" id="sound-browser-saved" aria-pressed="false">☆ FAVORITES</button>
+    </div>
+    <div class="browser-middle">
+      <div id="sound-browser-meta" role="status" aria-live="polite">153 original synth presets</div>
+      <div class="browser-nav">
+        <button type="button" id="sound-browser-prev" aria-label="Previous sound">←</button>
+        <button type="button" id="sound-browser-next" aria-label="Next sound">→</button>
+      </div>
+    </div>
+    <div id="sound-browser-results" class="browser-results" role="listbox" aria-label="Search results; arrow keys navigate, Enter uses sound"></div>
+    <div class="browser-footer">
+      <span id="sound-browser-selection">Select a sound to audition without changing the pattern.</span>
+      <button type="button" id="sound-browser-cancel" disabled>CANCEL PREVIEW</button>
+      <button type="button" id="sound-browser-use" disabled>USE THIS SOUND</button>
+    </div>
+    <p class="browser-note">☆ Favorites save factory preset references in this browser. Your edited synth parameters still belong to the current project session.</p>
+  </section>
   <details class="sound-scope" id="sound-scope"><summary>OSCILLOSCOPE <span>REAL SLOOP OUTPUT</span></summary>
     <div class="scope-head"><div><small>AUDIO / ORIGINAL SLOOP ENGINE</small><strong>Oscilloscope</strong></div>
       <div class="scope-stats"><span id="scope-state">PLAY OR AUDITION TO SEE SIGNAL</span><strong id="scope-peak">—</strong></div>
