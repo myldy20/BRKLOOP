@@ -388,6 +388,10 @@ try{
     assert.equal(await page.locator('.groove-mini-cell.on').count(),oldGrooveHits,
       'Drum generator visual source stays unchanged through mutation audition');
     await page.locator('#mutation-apply').click();
+    // Groove visualization is now lazy and contextual. Reopen the drum
+    // generator to inspect the newly committed native score after mutation.
+    await page.locator('#tool-groove').click();
+    assert.equal(await page.locator('#groove-panel').isVisible(),true);
     const lessGrooveHits=await page.locator('.groove-mini-cell.on').count();
     assert(lessGrooveHits<oldGrooveHits,'Density-minus removes some existing drum hits');
     await page.locator('#undo').click();
