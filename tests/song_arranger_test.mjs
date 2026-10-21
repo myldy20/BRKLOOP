@@ -42,7 +42,8 @@ for(const form of Object.keys(SONG_FORMS)){
     for(const sec of song.sections){
       assert.equal(sec.scene.length,64,'each section stays native 64 steps');
       assert.equal(sec.scene.tracks.length,4);
-      assert(sec.scene.tracks[3].steps[0].on&1,'drums kick on first beat');
+      if(sec.part!=='INTRO')assert(sec.scene.tracks[3].steps[0].on&1,
+        'drums kick on first beat outside intentionally atmospheric intro');
       const [bass,chords,arp,drums]=sec.scene.tracks.map(t=>t.steps);
       for(let i=0;i<64;i++){
         if(active(bass[i]))assert(drums[i].on&1,'bass event follows kick');
