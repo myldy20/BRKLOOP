@@ -478,7 +478,10 @@ try{
     // RATE and FILTER DEPTH and is one atomic Undo.
     const rateBefore=await page.locator('#viz-lfo-rate').inputValue();
     const depthBefore=await page.locator('#viz-lfo-depth').inputValue();
+    await page.locator('#viz-lfo').scrollIntoViewIfNeeded();
     const lfoBox=await page.locator('#viz-lfo').boundingBox();
+    assert(lfoBox.y>=0&&lfoBox.y+lfoBox.height<=(d.name==='phone'?844:900),
+      'Pointer test must target an actually visible LFO card');
     assert(lfoBox,'Editable LFO plot must have a hit area');
     await page.mouse.move(lfoBox.x+lfoBox.width*.30,lfoBox.y+lfoBox.height*.60);
     await page.mouse.down();
@@ -493,6 +496,7 @@ try{
 
     const tiltBefore=await page.locator('#viz-filter-tilt').inputValue();
     const offsetBefore=await page.locator('#viz-filter-offset').inputValue();
+    await page.locator('#viz-filter').scrollIntoViewIfNeeded();
     const filterBox=await page.locator('#viz-filter').boundingBox();
     await page.mouse.move(filterBox.x+filterBox.width*.25,filterBox.y+filterBox.height*.70);
     await page.mouse.down();
