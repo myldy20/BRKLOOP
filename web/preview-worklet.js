@@ -75,8 +75,9 @@ export class FirmwareAudio {
     for(const state of states){
       if(!Array.isArray(state?.tracks)||state.tracks.length!==4)
         throw new Error('Arrangement requires four native tracks');
-      for(const t of state.tracks)
-        if(t.p?.[29]!==64||t.p?.[30]!==div||t.step?.length!==64||t.dstep?.length!==64)
+      for(const [k,t] of state.tracks.entries())
+        if(t.p?.[29]!==64||t.p?.[30]!==div||
+           (k===3?t.dstep?.length!==64:t.step?.length!==64))
           throw new Error('Song sections require synchronized LEN 64 and DIV');
     }
     this.arrangement=null;
