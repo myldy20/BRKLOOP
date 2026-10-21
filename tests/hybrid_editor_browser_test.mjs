@@ -55,6 +55,8 @@ try{
     assert.equal(await page.locator('#tool-melody').isVisible(),true);
     assert.equal(await page.locator('#song-workspace').isVisible(),false);
     assert.equal(await page.locator('#keyboard-area').isVisible(),true);
+    assert.equal(await page.locator('#keyboard').isVisible(),d.name==='desktop',
+      'On narrow screens a sticky piano is collapsed until the musician opens it');
     await page.locator('#tool-scene').click();
     assert.equal(await page.locator('#tool-scene').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#scene-panel').isVisible(),true);
@@ -203,6 +205,11 @@ try{
     await page.locator('.step-cell[data-step="0"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3',
       'One tap on empty STEP places currently highlighted pitch');
+    if(d.name==='phone'){
+      assert.equal(await page.locator('#keyboard').isVisible(),false);
+      await page.locator('#toggle-keyboard').click();
+      assert.equal(await page.locator('#keyboard').isVisible(),true);
+    }
     await page.locator('.piano-key[data-note="52"]').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'E3',
       'Piano key writes selected step directly');
