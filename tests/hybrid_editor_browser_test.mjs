@@ -39,6 +39,52 @@ try{
     const wobble=nativeBank.engines[0].presets.find(x=>x.name==='WOBBLE');
     assert.equal(wobble.index,7);
     assert.equal(wobble.p[9],74);assert.equal(wobble.p[14],40);assert.equal(wobble.p[28],-24);
+    // One musical scene includes four synchronized tracks and stays a draft
+    // until Apply. Switching tracks during preview must keep all four parts.
+    assert.equal(await page.locator('#scene-panel').isVisible(),true);
+    assert.equal(await page.locator('#scene-apply').isDisabled(),true);
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
+    await page.locator('#scene-preview').click();
+    assert.equal(await page.locator('#scene-apply').isEnabled(),true);
+    assert.equal(await page.locator('#scene-meta').textContent().then(x=>x.includes('DRAFT #1')),true);
+    assert.equal(await page.locator('.scene-led[data-track="0"].on').count()>0,true);
+    assert.equal(await page.locator('.scene-led[data-track="1"].on').count()>0,true);
+    assert.equal(await page.locator('.scene-led[data-track="2"].on').count()>0,true);
+    assert.equal(await page.locator('.scene-led[data-track="3"].on').count()>0,true);
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'Four-track preview must not change editable score');
+    await page.locator('#tracks button').last().click();
+    assert.equal(await page.locator('#scene-apply').isEnabled(),true,
+      'Scene draft survives track changes for live comparison');
+    await page.locator('#tracks button').first().click();
+    await page.locator('#scene-next').click();
+    assert.equal(await page.locator('#scene-meta').textContent().then(x=>x.includes('DRAFT #2')),true);
+    await page.locator('#scene-cancel').click();
+    assert.equal(await page.locator('#scene-apply').isDisabled(),true);
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'Cancel restores untouched synth score');
+    await page.locator('#scene-preview').click();
+    await page.locator('#scene-apply').click();
+    assert.equal(await page.locator('#length').inputValue(),'64',
+      'Apply unifies LEN across all four tracks');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3',
+      'Generated bass downbeat uses harmonic root');
+    await page.locator('#tracks button').last().click();
+    assert.equal(await page.locator('#length').inputValue(),'64');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●',
+      'Generated kick is present on drum downbeat');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#length').inputValue(),'16');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'One Undo restores drums and LEN');
+    await page.locator('#tracks button').first().click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'Same Undo restored bass track');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'C3');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-scene.png',fullPage:true});
     assert.equal(await page.locator('#bpm').inputValue(),'90');
     await page.locator('#bpm').fill('140');await page.locator('#bpm').press('Tab');
     assert.equal(await page.locator('#bpm').inputValue(),'140');
