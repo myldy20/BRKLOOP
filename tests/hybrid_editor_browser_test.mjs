@@ -133,7 +133,7 @@ try{
     const exportEvent=page.waitForEvent('download');
     await page.locator('#song-export').click();
     const exported=await exportEvent;
-    assert.match(exported.suggestedFilename(),/^brkloop-song-full-\\d+\\.json$/,
+    assert.match(exported.suggestedFilename(),/^brkloop-song-full-\d+\.json$/,
       'Edited arrangement exports a portable JSON document');
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
       'Arranger edits never overwrite the live pattern');
