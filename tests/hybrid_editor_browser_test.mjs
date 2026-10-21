@@ -41,6 +41,17 @@ try{
     assert.equal(wobble.p[9],74);assert.equal(wobble.p[14],40);assert.equal(wobble.p[28],-24);
     // One musical scene includes four synchronized tracks and stays a draft
     // until Apply. Switching tracks during preview must keep all four parts.
+    // Focused workspace baseline: no generator or song arrangement competes
+    // with the native step editor before a user explicitly asks for it.
+    assert.equal(await page.locator('#pattern-tab').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('#song-panel').isVisible(),false);
+    assert.equal(await page.locator('#sound-panel').isVisible(),false);
+    assert.equal(await page.locator('#scene-panel').isVisible(),false);
+    assert.equal(await page.locator('#melody-panel').isVisible(),false);
+    assert.equal(await page.locator('#mutation-panel').isVisible(),false);
+    assert.equal(await page.locator('#tool-content').isVisible(),false);
+    await page.locator('#tool-scene').click();
+    assert.equal(await page.locator('#tool-scene').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#scene-panel').isVisible(),true);
     assert.equal(await page.locator('#scene-apply').isDisabled(),true);
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
@@ -87,6 +98,12 @@ try{
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-scene.png',fullPage:true});
     // Song arranger is an independent multi-scene sketch. Navigation, native
     // audio audition and JSON export must not overwrite editable SLOOP scores.
+    await page.locator('#song-tab').click();
+    assert.equal(await page.locator('#song-tab').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    assert.equal(await page.locator('#tracks').isVisible(),false);
+    assert.equal(await page.locator('#keyboard-area').isVisible(),false);
+    assert.equal(await page.locator('#scene-panel').isVisible(),false);
     assert.equal(await page.locator('#song-panel').isVisible(),true);
     assert.equal(await page.locator('#song-play').isDisabled(),true);
     await page.locator('#song-generate').click();
@@ -149,6 +166,9 @@ try{
     assert.equal(await page.locator('#song-timeline button[data-song-section="1"]').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
     await page.locator('#song-apply').click();
+    await page.locator('#pattern-tab').click();
+    assert.equal(await page.locator('#pattern-panel').isVisible(),true);
+    assert.equal(await page.locator('#song-panel').isVisible(),false);
     assert.equal(await page.locator('#length').inputValue(),'64');
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'A3',
       'Applying VERSE injects common harmonic root on bass, all four native parts');
@@ -217,7 +237,10 @@ try{
     await page.locator('#length').fill('64');await page.locator('#length').press('Tab');
     assert.equal(await page.locator('.step-cell').count(),64);
     // Musical starters use the genuine native SLOOP score and existing Undo.
+    await page.locator('#tool-melody').click();
     assert.equal(await page.locator('#melody-panel').isVisible(),true);
+    assert.equal(await page.locator('#scene-panel').isVisible(),false);
+    assert.equal(await page.locator('#tool-melody').getAttribute('aria-expanded'),'true');
     assert.equal(await page.locator('#melody-apply').isDisabled(),true);
     await page.locator('#melody-role').selectOption('CHORD');
     await page.locator('#melody-root').selectOption('9');
@@ -253,7 +276,9 @@ try{
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-melody.png',fullPage:true});
     // Mutate an EXISTING synth score without changing its notes, preset or
     // the original editor until Apply. Accent changes velocity and Undo is atomic.
+    await page.locator('#tool-mutation').click();
     assert.equal(await page.locator('#mutation-panel').isVisible(),true);
+    assert.equal(await page.locator('#melody-panel').isVisible(),false);
     await page.locator('.step-cell[data-step="0"]').click(); // select, don't erase
     const originalVelocity=await page.locator('#velocity').inputValue();
     await page.locator('#mutation-mode').selectOption('ACCENT');
@@ -307,6 +332,9 @@ try{
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'●');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-drums.png',fullPage:true});
     // Groove ideas: visual/audio preview is nondestructive; APPLY is one Undo.
+    assert.equal(await page.locator('#tool-melody').isVisible(),false,
+      'Drums offers drum generation rather than inapplicable note generation');
+    await page.locator('#tool-groove').click();
     assert.equal(await page.locator('#groove-panel').isVisible(),true);
     assert.equal(await page.locator('#groove-apply').isDisabled(),true);
     assert.equal(await page.locator('.step-cell[data-step="4"] .pitch').textContent(),'·');
@@ -335,7 +363,9 @@ try{
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-grooves.png',fullPage:true});
     // Mutate already-generated drum patterns, preserving sound kit and
     // all synth tracks. The candidate remains outside the editor until Apply.
+    await page.locator('#tool-mutation').click();
     assert.equal(await page.locator('#mutation-panel').isVisible(),true);
+    assert.equal(await page.locator('#groove-panel').isVisible(),false);
     await page.locator('#mutation-mode').selectOption('THIN');
     const oldGrooveHits=await page.locator('.groove-mini-cell.on').count();
     await page.locator('#mutation-preview').click();
