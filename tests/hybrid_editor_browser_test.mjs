@@ -469,6 +469,11 @@ try{
     await page.locator('#sound-browser-results .browser-pick').first().click();
     assert.equal(await page.locator('#engine-select').inputValue(),'0');
     await page.locator('#sound-browser-next').click();
+    await page.locator('#sound-browser-query').focus();
+    const beforeArrow=await page.locator('#sound-browser-selection').textContent();
+    await page.keyboard.press('ArrowDown');
+    assert.notEqual(await page.locator('#sound-browser-selection').textContent(),beforeArrow,
+      'Up/Down keys move across the original factory bank while search remains focused');
     await page.locator('#sound-browser-use').click();
     assert.equal(await page.locator('#sound-browser').isVisible(),false);
     assert.equal(await page.locator('#engine-select').inputValue(),'1',
@@ -722,6 +727,17 @@ try{
     const widths=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,view:innerWidth}));
     assert(widths.doc<=widths.view+1,'Unintended page horizontal overflow '+JSON.stringify(widths));
     assert.deepEqual(failures,[],d.name+' JavaScript console exceptions');
+    // Favorites are factory references persisted in this browser origin,
+    // never serialized over custom DSP parameters or native pattern data.
+    await page.reload({waitUntil:'networkidle'});
+    await page.locator('#sound-tab').click();
+    await page.locator('#sound-browse-open').click();
+    await page.locator('#sound-browser-saved').click();
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count()>=1,true,
+      'Saved native factory favorites survive a complete page reload');
+    await page.locator('#sound-browser-query').fill('wobble');
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count()>=1,true);
+    assert.deepEqual(failures,[],d.name+' JavaScript console exceptions after reload');
     await context.close();
     console.log('PASS '+d.name+': native 153-bank/WOBBLE, tempo Undo, STEP/ROLL, Sound and real SLOOP WASM');
   }
