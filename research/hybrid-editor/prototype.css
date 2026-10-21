@@ -455,3 +455,115 @@ header h1{color:#fbfbff;letter-spacing:-.06em;}
 @media(max-width:520px){.song-edit-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
   .song-edit-actions button{min-width:0;white-space:normal;font-size:10px;padding:6px 3px;}
 }
+
+/* Focused workspace UI v1. Pattern is an editor, Song is a separate document,
+   Sound is a parameter desk. All existing features remain available. */
+.shell{max-width:1320px;gap:10px;padding:14px 20px;}
+header{align-items:center;gap:14px;padding:3px 2px 1px;}
+header h1{font-size:25px;margin:0;line-height:1.12;}
+header small{letter-spacing:1.2px;font-size:9px;}
+.status{white-space:normal;overflow-wrap:anywhere;max-width:min(48vw,650px);
+  text-align:right;padding:6px 10px;line-height:1.4;font-size:10px;
+  border:0;background:transparent;box-shadow:none;}
+.workspace-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  width:100%;margin:1px 0 2px;padding:4px;gap:4px;border-radius:10px;
+  background:#13141b;border-color:#30313c;}
+.workspace-tabs button{min-width:0;min-height:44px;border-radius:7px;font-weight:800;
+  box-shadow:none;letter-spacing:.1em;transition:background .13s;}
+.workspace-tabs button[aria-pressed="false"]{background:transparent;border-color:transparent;color:#aeb6c5;}
+.workspace-tabs button[aria-pressed="true"]{background:#282c3b;border:1px solid #5d7799;
+  color:#f6f9ff;box-shadow:inset 0 1px 0 #ffffff15;}
+.workspace-tabs .hint{display:none;}
+.workspace.song-open,.workspace.sound-open{grid-template-columns:minmax(0,1fr);}
+.song-workspace{padding:0;border:none;background:transparent;min-height:0;}
+.song-workspace .song-panel{margin:0;padding:18px;border-color:#353e4b;
+  background:#11151e;border-radius:11px;}
+.editor-head{position:static;padding:0;border:0;background:transparent;}
+.edit-options{position:static;top:auto;padding:2px 0 10px;margin:6px 0 3px;
+  border-bottom:1px solid #282c39;background:transparent;}
+.editor-canvas{max-height:min(600px,66vh);min-height:220px;}
+.step-cell{height:56px;}
+.inspector{padding:13px;gap:8px;}
+.inspector .hint{font-size:10px;line-height:1.5;}
+.track{min-height:59px;padding:9px 12px;}
+.track.active{box-shadow:inset 0 1px 0 #ffffff10,0 0 0 1px var(--track-accent);}
+.topbar{padding:8px 10px;gap:8px;min-height:50px;}
+.topbar>button{min-height:37px;}
+.topbar button:disabled{opacity:.36;}
+.tool-workbench{margin-top:13px;padding:11px 12px;border-radius:10px;
+  border:1px solid #303440;background:#11141c;}
+.tool-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;}
+.tool-head strong{font-size:14px;letter-spacing:-.02em;display:block;margin-top:2px;}
+.tool-context{font:10px/1.45 ui-monospace,Menlo,monospace;color:#919eac;text-align:right;}
+.tool-choices{display:flex;flex-wrap:wrap;gap:5px;}
+.tool-choices button{min-height:39px;flex:1 1 115px;font-size:10px;font-weight:850;
+  letter-spacing:.025em;color:#bccad9;border-radius:6px;background:#1a202b;
+  border:1px solid #343f50;box-shadow:none;}
+.tool-choices button[aria-pressed="true"]{color:#f6faff;border-color:var(--accent);
+  background:#273244;box-shadow:inset 0 -2px 0 var(--accent);}
+.tool-choices button[aria-expanded="true"]:after{content:'  ▴';color:var(--accent);}
+.tool-content{margin-top:11px;border-top:1px solid #343b49;padding-top:11px;}
+.tool-content>section{margin:0!important;max-width:100%;}
+.tool-content .scene-panel,.tool-content .groove-panel,.tool-content .melody-panel,
+.tool-content .mutation-panel{background:#0e1119;box-shadow:none;border:1px solid #333a4a;padding:12px;}
+.tool-content .scene-heading p,.tool-content .melody-top p,.tool-content .mutation-heading p,
+.tool-content .groove-top p{font-size:11px;line-height:1.45;}
+.song-panel .song-head p{max-width:700px;}
+.song-actions{gap:6px;}
+.song-actions button{min-height:42px;}
+.song-editbar{border-top:1px solid #313a46;margin-top:6px;}
+.sound-panel{min-height:0;}
+.keyboard-area{background:#101218;}
+footer{color:#7f8c9d;}
+@media(max-width:900px){
+  .shell{padding:9px;gap:8px;}
+  .workspace-tabs{position:sticky;top:0;z-index:12;}
+  .workspace-tabs button{min-height:45px;}
+  .editor{padding:10px;}
+  .editor-head{top:auto;}
+  .edit-options{top:auto;}
+  .editor-canvas{max-height:51vh;min-height:200px;}
+  .song-workspace{padding:0;}
+  .song-workspace .song-panel{padding:11px;}
+  .tool-workbench{padding:9px;}
+  .tool-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+  .tool-choices button{min-height:42px;}
+}
+@media(max-width:520px){
+  header{gap:7px;}
+  header h1{font-size:21px;}
+  .status{max-width:55vw;font-size:9px;padding:4px;max-height:62px;overflow:hidden;}
+  .topbar{gap:5px;}
+  .topbar>button{padding:0 9px;min-height:37px;}
+  .track{padding:7px 5px;min-height:57px;}
+  .track strong{font-size:11px;}
+  .track span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .editor-canvas{padding:7px;}
+  .tool-head strong{font-size:13px;}
+  .tool-context{max-width:130px;font-size:9px;}
+  .song-workspace .song-panel{padding:9px;}
+}
+
+/* Song edit actions: a short primary row; destructive and history commands in
+   an explicit disclosure. No modal and no extra navigation level. */
+.song-editbar{grid-template-columns:148px minmax(0,1fr);border-top:0;border-bottom:1px solid #2e3646;}
+.song-edit-actions{display:flex;align-items:stretch;flex-wrap:wrap;gap:5px;}
+.song-edit-actions>button{min-width:94px;padding:7px 8px;}
+.song-more{position:relative;align-self:stretch;min-width:130px;}
+.song-more>summary{display:flex;align-items:center;justify-content:center;padding:9px 10px;min-height:36px;
+  border:1px solid #414c60;background:#1a2330;border-radius:6px;color:#c8d6e8;
+  cursor:pointer;font:bold 10px/1.4 ui-monospace,Menlo,monospace;list-style:none;}
+.song-more>summary::-webkit-details-marker{display:none;}
+.song-more>summary:after{content:' ▾';color:#93b3d6;}
+.song-more[open]>summary{border-color:#7493b4;background:#24354a;}
+.song-more[open]>summary:after{content:' ▴';}
+.song-more-actions{display:flex;flex-wrap:wrap;gap:6px;padding:9px 0 1px;}
+.song-more-actions button{min-height:37px;padding:7px 10px;font-size:10px;}
+@media(max-width:800px){.song-editbar{grid-template-columns:1fr;}}
+@media(max-width:520px){
+ .song-edit-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+ .song-edit-actions>button{min-width:0;white-space:normal;}
+ .song-more{grid-column:1/-1;}
+ .song-more-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
+ .song-more-actions button{min-width:0;padding:7px 4px;white-space:normal;}
+}

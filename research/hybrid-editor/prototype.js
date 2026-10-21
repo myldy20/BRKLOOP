@@ -48,7 +48,8 @@ let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=nu
 let songDraft=null,songSession=null,songSeed=1,songIndex=0,songActive=-1,songCycle=-1,songPlaying=false;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
-let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
+const compactScreen=window.matchMedia('(max-width:900px)').matches;
+let workspaceTab='pattern',activeTool=null,keyboardVisible=!compactScreen,rollScroll={left:0,top:0};
 let soundPage='tone';
 function soundState(){
   const state=session.getState();
@@ -74,7 +75,7 @@ function soundState(){
       t.micro.fill(0);t.fill.fill(0);t.locks=[];
     }
   }
-  if(songDraft)return applyArrangementSection(state,songDraft.sections[songIndex]);
+  if(songDraft&&workspaceTab==='song')return applyArrangementSection(state,songDraft.sections[songIndex]);
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
@@ -703,6 +704,9 @@ function updateSongTransportLabel(){
     btn.classList.toggle('playing',songPlaying&&Number(btn.dataset.songSection)===songActive);
 }
 function renderSong(){
+  $('song-editbar').hidden=!songDraft;
+  for(const id of ['song-play','song-apply','song-export','song-cancel','song-next'])
+    $(id).hidden=!songDraft;
   $('song-play').disabled=!songDraft;
   $('song-apply').disabled=!songDraft;
   $('song-export').disabled=!songDraft;
@@ -789,7 +793,9 @@ function applySongSection(){
     if(edited){
       const v=session.getView();
       if(v.step>=64)session.select(v.track,63);
-      player?.sync();render();
+      // Applying a song section is an edit action. Take the user straight
+      // to its native STEP/ROLL score instead of leaving them on the song form.
+      selectWorkspace('pattern');
       status('APPLIED '+songDraft.sections[songIndex].title+
         ' TO EDITOR · original presets retained · one Undo');
     }
@@ -848,36 +854,73 @@ function exportSong(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   status('EXPORTED '+songDraft.sections.length+' linked sections · BRKLOOP_ARRANGEMENT_V1');
 }
+function renderToolDrawer(){
+  const drum=current().v.track===3;
+  if(activeTool==='groove'&&!drum)activeTool=null;
+  if(activeTool==='melody'&&drum)activeTool=null;
+  const labels={
+    groove:'Drum pattern',melody:'Note pattern',
+    mutation:'Edit existing material',scene:'Four-track sketch'
+  };
+  $('tool-workbench-title').textContent=activeTool?labels[activeTool]:'Make something from this pattern';
+  $('tool-context').textContent=activeTool?'Tap the selected tool again to close':'Choose one tool when you need it';
+  $('tool-groove').hidden=!drum;
+  $('tool-melody').hidden=drum;
+  const showing=Boolean(activeTool);
+  $('tool-content').hidden=!showing;
+  for(const id of ['groove','melody','mutation','scene']){
+    const pressed=activeTool===id;
+    const control=$('tool-'+id);
+    control.setAttribute('aria-pressed',String(pressed));
+    control.setAttribute('aria-expanded',String(pressed));
+    $(id+'-panel').hidden=!pressed;
+  }
+}
 function selectWorkspace(tab){
-  if(tab!=='pattern'&&tab!=='sound')return;
-  if(tab!=='pattern'&&(grooveDraft||melodyDraft||mutationDraft)){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
+  if(!['pattern','song','sound'].includes(tab))return;
+  if(tab===workspaceTab)return;
+  if(songPlaying)stopSongPlayback();
+  if(tab!=='pattern'&&(grooveDraft||melodyDraft||mutationDraft||sceneDraft)){
+    grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
+  }
   workspaceTab=tab;
-  // A keyboard in Sound is an audition tool; a hidden keyboard in Roll frees
-  // vertical screen space so musicians never scroll back to Draw/Erase.
-  keyboardVisible=tab==='sound'||current().v.mode==='step';
+  // Keep the MIDI keyboard opt-in on touch screens; its sticky piano was
+  // occupying a large portion of the pattern and sound editor viewport.
+  keyboardVisible=!compactScreen && (tab==='sound'||(tab==='pattern'&&current().v.mode==='step'));
+  player?.sync();
   render();
 }
 function render(){
   const {v,track}=current();
-  const sound=workspaceTab==='sound';
+  const sound=workspaceTab==='sound',song=workspaceTab==='song',pattern=workspaceTab==='pattern';
   $('workspace').classList.toggle('sound-open',sound);
+  $('workspace').classList.toggle('song-open',song);
   document.querySelector('.shell').dataset.track=String(v.track);
-  $('pattern-panel').hidden=sound;$('sound-panel').hidden=!sound;$('inspector').hidden=sound;
-  $('pattern-tab').setAttribute('aria-pressed',String(!sound));
-  $('sound-tab').setAttribute('aria-pressed',String(sound));
+  $('workspace-title').textContent=pattern?'Pattern':song?'Song':'Sound';
+  $('pattern-panel').hidden=!pattern;$('song-workspace').hidden=!song;
+  $('sound-panel').hidden=!sound;$('inspector').hidden=!pattern;
+  $('tracks').hidden=song;$('keyboard-area').hidden=song;
+  for(const tab of ['pattern','song','sound'])
+    $(tab+'-tab').setAttribute('aria-pressed',String(workspaceTab===tab));
+  // The global buttons edit one native pattern; hide them in Song to avoid
+  // offering two different Play / Undo interfaces at once.
+  for(const id of ['play','stop','undo','redo'])$(id).hidden=song;
   $('sound-name').textContent=v.track===3?bank.kits[track.p[bank.pe0]]:
     (bank.engines[track.engine]?.name+' / '+bank.engines[track.engine]?.presets[track.preset]?.name);
-  renderTracks();
+  if(!song)renderTracks();
   if(sound)renderSound();
+  else if(song)renderSong();
   else{
     renderOptions();
     if(v.mode==='step')renderStep();else renderRoll();
     renderInspector();
-    renderGroove();
-    renderMelody();
-    renderMutation();
-    renderScene();
-    renderSong();
+    // Only the selected tool is rendered. Hidden generators no longer
+    // repeatedly create 64-step / multi-track DOM grids on every key press.
+    if(activeTool==='groove')renderGroove();
+    else if(activeTool==='melody')renderMelody();
+    else if(activeTool==='mutation')renderMutation();
+    else if(activeTool==='scene')renderScene();
+    renderToolDrawer();
   }
   $('bpm').value=String(current().state.g[0]);
   $('swing').value=String(current().state.g[1]);
@@ -975,7 +1018,23 @@ $('mutation-amount').addEventListener('input',()=>{
   renderMutation();
   $('mutation-meta').textContent='Settings changed · press PREVIEW MUTATION again';
 });
+for(const id of ['groove','melody','mutation','scene']){
+  $('tool-'+id).addEventListener('click',()=>{
+    if(activeTool!==id && (grooveDraft||melodyDraft||mutationDraft||sceneDraft)){
+      grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
+      player?.sync();
+    }
+    activeTool=activeTool===id?null:id;
+    if(!activeTool){
+      grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
+      player?.sync();
+    }
+    render();
+    if(activeTool)$('tool-content').scrollIntoView({block:'nearest',behavior:'instant'});
+  });
+}
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
+$('song-tab').addEventListener('click',()=>selectWorkspace('song'));
 $('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
 $('toggle-keyboard').addEventListener('click',()=>{keyboardVisible=!keyboardVisible;render();});
 $('quick-erase').addEventListener('click',eraseSelected);

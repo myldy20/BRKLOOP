@@ -5,74 +5,36 @@
 <link rel="stylesheet" href="./prototype.css">
 </head><body>
 <div class="shell">
-<header><div><small>BRKLOOP / RESEARCH 01</small><h1>Make a pattern</h1></div><div class="status" id="status">Experimental editor</div></header>
+<header><div><small>BRKLOOP / STUDIO</small><h1 id="workspace-title">Pattern</h1></div><div class="status" id="status">Experimental editor</div></header>
 <div class="topbar"><button id="play">▶ Play</button><button id="stop">■ Stop</button><span class="divider"></span><button id="undo" aria-label="Undo">↶ Undo</button><button id="redo" aria-label="Redo">↷ Redo</button><div class="transport-tempo"><label>BPM <input id="bpm" type="number" min="40" max="240" step="1" value="90" inputmode="numeric"></label>
 <label>SWING <input id="swing" type="number" min="0" max="100" step="1" value="0" inputmode="numeric"></label></div></div>
 <div class="tracks" id="tracks"></div>
-<nav class="workspace-tabs" aria-label="Workspace"><button id="pattern-tab" aria-pressed="true">PATTERN</button><button id="sound-tab" aria-pressed="false">SOUND</button><span id="sound-name" class="hint">Select a track to edit sound</span></nav>
+<nav class="workspace-tabs" aria-label="Main workspace">
+  <button id="pattern-tab" aria-pressed="true">PATTERN</button>
+  <button id="song-tab" aria-pressed="false">SONG</button>
+  <button id="sound-tab" aria-pressed="false">SOUND</button>
+  <span id="sound-name" class="hint">Edit patterns, arrange sections or shape sound</span>
+</nav>
 <main class="workspace" id="workspace">
 <section class="editor" id="pattern-panel">
   <div class="editor-head"><div><small>PATTERN EDITOR</small><h2 id="track-title">Track 01</h2></div><div class="mode" role="group" aria-label="Editor mode"><button id="step-mode" aria-pressed="true">STEP</button><button id="roll-mode" aria-pressed="false">ROLL</button></div></div>
   <div class="edit-options"><label>LEN <input id="length" type="number" min="1" max="64" value="16"></label><label>DIV <select id="division"></select></label><label class="auto-label">AUTO <input id="auto" type="checkbox"></label>
 <div class="roll-pitch-nav" id="roll-pitch-nav" hidden><button id="roll-down" aria-label="Lower piano roll octave">−</button><strong id="roll-range">C3–B3</strong><button id="roll-up" aria-label="Raise piano roll octave">+</button></div>
 <button id="quick-erase" class="quick-erase" aria-label="Erase selected note or step">⌫ ERASE</button></div>
-<section class="song-panel" id="song-panel" aria-label="Song arranger">
-  <div class="song-head"><div><small>SONG / ARRANGEMENT</small><strong>Arrange a song</strong>
-    <p>Generate distinct intro, verse, chorus, breakdown and outro sections. Audition each part or play the complete song with native SLOOP.</p>
-  </div><span class="song-chip" id="song-chip">MULTI-SCENE</span></div>
-  <div class="song-controls">
-    <label>FORM<select id="song-form" aria-label="Song form">
-      <option value="FULL">FULL · 8 SECTIONS</option><option value="SHORT">SHORT · 4 SECTIONS</option>
-    </select></label>
-    <label>ROOT<select id="song-root" aria-label="Song key root">
-      <option value="0">C</option><option value="1">C♯</option><option value="2">D</option>
-      <option value="3">D♯</option><option value="4">E</option><option value="5">F</option>
-      <option value="6">F♯</option><option value="7">G</option><option value="8">G♯</option>
-      <option value="9" selected>A</option><option value="10">A♯</option><option value="11">B</option>
-    </select></label>
-    <label>SCALE<select id="song-scale" aria-label="Song scale">
-      <option value="MINOR">MINOR</option><option value="MAJOR">MAJOR</option>
-    </select></label>
-    <label>HARMONY<select id="song-progression" aria-label="Song progression">
-      <option value="MINOR">i–VI–III–VII</option><option value="POP">I–V–vi–IV</option>
-      <option value="CYCLE">I–vi–IV–V</option><option value="RISE">I–IV–V–vi</option>
-    </select></label>
-    <label>GROOVE<select id="song-groove" aria-label="Song groove">
-      <option value="DNB">DRUM &amp; BASS</option><option value="BREAK">BREAK</option>
-      <option value="HOUSE">HOUSE</option><option value="BOOM_BAP">BOOM BAP</option>
-      <option value="AMAPIANO">AMAPIANO</option>
-    </select></label>
-  </div>
-  <div class="groove-actions song-actions">
-    <button id="song-generate" type="button">GENERATE SONG</button>
-    <button id="song-next" type="button" disabled>EVOLVE UNLOCKED</button>
-    <button id="song-play" type="button" disabled>▶ PLAY SONG</button>
-    <button id="song-apply" type="button" disabled>APPLY SECTION</button>
-    <button id="song-export" type="button" disabled>EXPORT JSON</button>
-    <button id="song-cancel" type="button" disabled>CANCEL</button>
-  </div>
-  <div class="song-editbar" id="song-editbar" aria-label="Selected song section controls">
-    <label>SELECTED DURATION<select id="song-repeats" aria-label="Selected section duration" disabled>
-      <option value="1">4 BARS</option>
-      <option value="2">8 BARS</option>
-      <option value="3">12 BARS</option>
-      <option value="4">16 BARS</option>
-    </select></label>
-    <div class="song-edit-actions">
-      <button id="song-left" type="button" aria-label="Move section left" disabled>← MOVE</button>
-      <button id="song-right" type="button" aria-label="Move section right" disabled>MOVE →</button>
-      <button id="song-duplicate" type="button" disabled>DUPLICATE</button>
-      <button id="song-delete" type="button" disabled>DELETE</button>
-      <button id="song-lock" type="button" disabled>LOCK</button>
-      <button id="song-regen" type="button" disabled>REMAKE SELECTED</button>
-      <button id="song-edit-undo" type="button" disabled>↶ SONG UNDO</button>
-      <button id="song-edit-redo" type="button" disabled>↷ SONG REDO</button>
+<div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
+  <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
+  <section class="tool-workbench" id="tool-workbench" aria-label="Pattern ideas and transformations">
+    <div class="tool-head">
+      <div><small>TOOLS / OPTIONAL</small><strong id="tool-workbench-title">Build on your pattern</strong></div>
+      <span class="tool-context" id="tool-context">Select an idea below</span>
     </div>
-  </div>
-  <div class="song-now" id="song-now" role="status" aria-live="polite">Generate a song. Your current four-track pattern is preserved until Apply Section.</div>
-  <div class="song-timeline" id="song-timeline" aria-label="Song section timeline"></div>
-  <p class="song-footnote">Move, duplicate or delete sections; duration repeats each native 4-bar scene for 4–16 bars. Lock a keeper, then Evolve Unlocked to regenerate only the others. Song Undo/Redo manages arrangement edits separately from the pattern editor's Undo. Play Song loops through the complete form. Apply Section copies the selected native scene to the editor; Export JSON preserves the full edited arrangement.</p>
-</section>
+    <div class="tool-choices" id="tool-choices" role="group" aria-label="Pattern tool">
+      <button id="tool-groove" type="button" aria-pressed="false" aria-expanded="false">DRUM IDEAS</button>
+      <button id="tool-melody" type="button" aria-pressed="false" aria-expanded="false">NOTE IDEAS</button>
+      <button id="tool-mutation" type="button" aria-pressed="false" aria-expanded="false">MUTATE</button>
+      <button id="tool-scene" type="button" aria-pressed="false" aria-expanded="false">FOUR-TRACK SCENE</button>
+    </div>
+    <div class="tool-content" id="tool-content" hidden>
 <section class="scene-panel" id="scene-panel" aria-label="Compose four linked tracks">
   <div class="scene-heading">
     <div><small>COMPOSE / FOUR TRACKS</small><strong>Build a scene</strong>
@@ -202,8 +164,72 @@
   </div>
   <div class="mutation-visual" id="mutation-visual" aria-label="Pattern before and after mutation"></div>
 </section>
-<div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
-  <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
+    </div>
+  </section>
+</section>
+<section class="editor song-workspace" id="song-workspace" hidden>
+<section class="song-panel" id="song-panel" aria-label="Song arranger">
+  <div class="song-head"><div><small>SONG / ARRANGEMENT</small><strong>Arrange a song</strong>
+    <p>Generate distinct intro, verse, chorus, breakdown and outro sections. Audition each part or play the complete song with native SLOOP.</p>
+  </div><span class="song-chip" id="song-chip">MULTI-SCENE</span></div>
+  <div class="song-controls">
+    <label>FORM<select id="song-form" aria-label="Song form">
+      <option value="FULL">FULL · 8 SECTIONS</option><option value="SHORT">SHORT · 4 SECTIONS</option>
+    </select></label>
+    <label>ROOT<select id="song-root" aria-label="Song key root">
+      <option value="0">C</option><option value="1">C♯</option><option value="2">D</option>
+      <option value="3">D♯</option><option value="4">E</option><option value="5">F</option>
+      <option value="6">F♯</option><option value="7">G</option><option value="8">G♯</option>
+      <option value="9" selected>A</option><option value="10">A♯</option><option value="11">B</option>
+    </select></label>
+    <label>SCALE<select id="song-scale" aria-label="Song scale">
+      <option value="MINOR">MINOR</option><option value="MAJOR">MAJOR</option>
+    </select></label>
+    <label>HARMONY<select id="song-progression" aria-label="Song progression">
+      <option value="MINOR">i–VI–III–VII</option><option value="POP">I–V–vi–IV</option>
+      <option value="CYCLE">I–vi–IV–V</option><option value="RISE">I–IV–V–vi</option>
+    </select></label>
+    <label>GROOVE<select id="song-groove" aria-label="Song groove">
+      <option value="DNB">DRUM &amp; BASS</option><option value="BREAK">BREAK</option>
+      <option value="HOUSE">HOUSE</option><option value="BOOM_BAP">BOOM BAP</option>
+      <option value="AMAPIANO">AMAPIANO</option>
+    </select></label>
+  </div>
+  <div class="groove-actions song-actions">
+    <button id="song-generate" type="button">GENERATE SONG</button>
+    <button id="song-next" type="button" disabled>EVOLVE UNLOCKED</button>
+    <button id="song-play" type="button" disabled>▶ PLAY SONG</button>
+    <button id="song-apply" type="button" disabled>APPLY SECTION</button>
+    <button id="song-export" type="button" disabled>EXPORT JSON</button>
+    <button id="song-cancel" type="button" disabled>CANCEL</button>
+  </div>
+  <div class="song-now" id="song-now" role="status" aria-live="polite">Generate a song. Your current four-track pattern is preserved until Apply Section.</div>
+  <div class="song-timeline" id="song-timeline" aria-label="Song section timeline"></div>
+  <div class="song-editbar" id="song-editbar" hidden aria-label="Selected song section controls">
+    <label>SELECTED DURATION<select id="song-repeats" aria-label="Selected section duration" disabled>
+      <option value="1">4 BARS</option>
+      <option value="2">8 BARS</option>
+      <option value="3">12 BARS</option>
+      <option value="4">16 BARS</option>
+    </select></label>
+    <div class="song-edit-actions">
+      <button id="song-left" type="button" aria-label="Move section left" disabled>← MOVE</button>
+      <button id="song-right" type="button" aria-label="Move section right" disabled>MOVE →</button>
+      <button id="song-lock" type="button" disabled>LOCK</button>
+      <button id="song-regen" type="button" disabled>REMAKE</button>
+      <details class="song-more" id="song-more">
+        <summary>MORE ACTIONS</summary>
+        <div class="song-more-actions">
+          <button id="song-duplicate" type="button" disabled>DUPLICATE</button>
+          <button id="song-delete" type="button" disabled>DELETE</button>
+          <button id="song-edit-undo" type="button" disabled>↶ SONG UNDO</button>
+          <button id="song-edit-redo" type="button" disabled>↷ SONG REDO</button>
+        </div>
+      </details>
+    </div>
+  </div>
+  <p class="song-footnote">Move, duplicate or delete sections; duration repeats each native 4-bar scene for 4–16 bars. Lock a keeper, then Evolve Unlocked to regenerate only the others. Song Undo/Redo manages arrangement edits separately from the pattern editor's Undo. Play Song loops through the complete form. Apply Section copies the selected native scene to the editor; Export JSON preserves the full edited arrangement.</p>
+</section>
 </section>
 <section class="editor sound-panel" id="sound-panel" hidden>
   <div class="sound-header">
@@ -257,7 +283,7 @@
 <div id="keyboard" class="keyboard"></div>
 <div id="chord-preview" class="hint"></div>
 </div>
-<footer>BRKLOOP / Native preview · compiled SLOOP 153-preset bank · session data resets on reload</footer>
+<footer>BRKLOOP Preview · Original SLOOP DSP / 153 factory sounds · Experimental work is held in this browser tab until exported</footer>
 </div>
 <script type="module" src="./prototype.js"></script>
 </body></html>
