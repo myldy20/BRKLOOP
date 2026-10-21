@@ -436,7 +436,8 @@ try{
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
     assert.equal(await page.locator('#scope-canvas').isVisible(),true);
-    assert.match(await page.locator('#scope-state').textContent(),/PLAY OR AUDITION/);
+    assert.match(await page.locator('#scope-state').textContent(),/PLAY OR AUDITION|LIVE \/ DSP AUDIO/,
+      'Scope is idle until the first preview; prior song audition may already have started the DSP');
     assert.equal(await page.locator('.sound-viz').count(),3);
     assert.equal(await page.locator('#viz-env-handles circle').count(),4);
     assert.match(await page.locator('#viz-env-line').getAttribute('d'),/^M /);
