@@ -16,6 +16,52 @@
   <div class="edit-options"><label>LEN <input id="length" type="number" min="1" max="64" value="16"></label><label>DIV <select id="division"></select></label><label class="auto-label">AUTO <input id="auto" type="checkbox"></label>
 <div class="roll-pitch-nav" id="roll-pitch-nav" hidden><button id="roll-down" aria-label="Lower piano roll octave">−</button><strong id="roll-range">C3–B3</strong><button id="roll-up" aria-label="Raise piano roll octave">+</button></div>
 <button id="quick-erase" class="quick-erase" aria-label="Erase selected note or step">⌫ ERASE</button></div>
+<section class="scene-panel" id="scene-panel" aria-label="Compose four linked tracks">
+  <div class="scene-heading">
+    <div><small>COMPOSE / FOUR TRACKS</small><strong>Build a scene</strong>
+      <p>Kick-locked bass · shared chord progression · arpeggio follows hi-hats. One Preview, one Apply, one Undo.</p>
+    </div>
+    <span class="scene-chip">4 TRACKS / SLOOP DSP</span>
+  </div>
+  <div class="scene-controls">
+    <label>ROOT<select id="scene-root" aria-label="Scene root key">
+      <option value="0">C</option><option value="1">C♯</option><option value="2">D</option>
+      <option value="3">D♯</option><option value="4">E</option><option value="5">F</option>
+      <option value="6">F♯</option><option value="7">G</option><option value="8">G♯</option>
+      <option value="9">A</option><option value="10">A♯</option><option value="11">B</option>
+    </select></label>
+    <label>MODE<select id="scene-scale" aria-label="Scene musical mode">
+      <option value="MINOR">MINOR</option><option value="MAJOR">MAJOR</option>
+    </select></label>
+    <label>CHORDS<select id="scene-progression" aria-label="Scene progression">
+      <option value="MINOR">i–VI–III–VII</option>
+      <option value="POP">I–V–vi–IV</option>
+      <option value="CYCLE">I–vi–IV–V</option>
+      <option value="RISE">I–IV–V–vi</option>
+    </select></label>
+    <label>DRUM GROOVE<select id="scene-groove" aria-label="Scene drum groove">
+      <option value="DNB">DRUM &amp; BASS</option>
+      <option value="HOUSE">HOUSE</option><option value="BREAK">BREAK</option>
+      <option value="BOOM_BAP">BOOM BAP</option><option value="AMAPIANO">AMAPIANO</option>
+    </select></label>
+    <label>FEEL<select id="scene-feel" aria-label="Scene interplay">
+      <option value="DRIVE">DRIVE</option><option value="TIGHT">TIGHT</option>
+      <option value="AIRY">AIRY</option>
+    </select></label>
+    <label>BARS<select id="scene-length" aria-label="Scene bars">
+      <option value="64">4 · 64 STEPS</option><option value="32">2 · 32 STEPS</option>
+      <option value="16">1 · 16 STEPS</option>
+    </select></label>
+  </div>
+  <div class="groove-actions scene-actions">
+    <button id="scene-preview" type="button">PREVIEW SCENE</button>
+    <button id="scene-next" type="button">NEXT VARIATION</button>
+    <button id="scene-apply" type="button" disabled>APPLY ALL FOUR</button>
+    <button id="scene-cancel" type="button" disabled>CANCEL</button>
+    <span id="scene-meta" role="status" aria-live="polite">Keeps sounds and BPM. Apply replaces all four scores, synchronizes LEN/DIV, and clears old per-step locks/fills.</span>
+  </div>
+  <div class="scene-visual" id="scene-visual" aria-label="Shared scene drum, bass, chord and arpeggio steps"></div>
+</section>
 <section class="groove-panel" id="groove-panel" aria-label="Drum groove ideas" hidden>
   <div class="groove-top">
     <div><small>IDEAS / DRUM GROOVE</small><strong>Build a beat</strong><p>Preview uses the native SLOOP drum kit; Apply is one Undo step.</p></div>
