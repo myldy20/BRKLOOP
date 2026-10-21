@@ -703,6 +703,9 @@ function updateSongTransportLabel(){
     btn.classList.toggle('playing',songPlaying&&Number(btn.dataset.songSection)===songActive);
 }
 function renderSong(){
+  $('song-editbar').hidden=!songDraft;
+  for(const id of ['song-play','song-apply','song-export','song-cancel','song-next'])
+    $(id).hidden=!songDraft;
   $('song-play').disabled=!songDraft;
   $('song-apply').disabled=!songDraft;
   $('song-export').disabled=!songDraft;
