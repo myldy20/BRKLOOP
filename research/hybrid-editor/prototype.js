@@ -100,8 +100,41 @@ function selectStep(step){
   session.select(v.track,step);render();
 }
 
+// Wave samples are supplied by the ORIGINAL audio DSP output, not generated
+// from knob values. This view draws an actual low-bandwidth time-domain trace.
+let scopeSeen=false;
+function drawScope(wave,peak){
+  const canvas=$('scope-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx)return;
+  const w=canvas.width,h=canvas.height,mid=h/2;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#090f19';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#253648';ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let i=0;i<=8;i++){const x=i*w/8;ctx.moveTo(x,0);ctx.lineTo(x,h);}
+  for(let i=0;i<=4;i++){const y=i*h/4;ctx.moveTo(0,y);ctx.lineTo(w,y);}
+  ctx.stroke();
+  ctx.strokeStyle='#274960';ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
+  ctx.strokeStyle='#62e2be';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.beginPath();
+  const points=wave?.length||0;
+  for(let i=0;i<points;i++){
+    const x=i*w/Math.max(1,points-1);
+    const y=mid-clamp(Number(wave[i])||0,-1,1)*mid*.88;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  if(wave){
+    scopeSeen=true;
+    $('scope-state').textContent='LIVE / DSP AUDIO';
+    $('scope-peak').textContent='PEAK '+Math.round(Math.min(1,Math.max(0,peak||0))*100)+'%';
+  }
+}
 async function ensureAudio(){
-  if(!player)player=new LocalPreview(soundState,e=>status(e.message),()=>{},transport=>onSongTransport(transport));
+  if(!player)player=new LocalPreview(soundState,e=>status(e.message),()=>{},transport=>onSongTransport(transport),
+    (wave,peak)=>drawScope(wave,peak));
   await player.start();
 }
 async function audition(note,trackId=current().v.track){
@@ -1096,6 +1129,7 @@ function render(){
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+drawScope();
 attachEnvelopeEditor();
 for(const button of document.querySelectorAll('[data-sound-jump]')){
   button.addEventListener('click',()=>{
