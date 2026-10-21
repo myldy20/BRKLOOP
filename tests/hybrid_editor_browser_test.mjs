@@ -477,6 +477,12 @@ try{
       'Filter graph gives direct access to otherwise folded native filter controls');
     await page.locator('[data-sound-jump="lfo"]').click();
 
+    // Instrument audition works without any notes placed in the pattern and
+    // feeds the real waveform scope via SLOOP's audio-thread meter.
+    await page.locator('#sound-audition').click();
+    assert.match(await page.locator('#status').textContent(),/AUDITION · [A-G]/);
+    await page.waitForFunction(()=>document.getElementById('scope-state').textContent.startsWith('LIVE / DSP AUDIO'),
+      {timeout:15000});
     // Instrument only the real AudioWorklet boundary: a slider input without
     // mouseup/change MUST emit a live param command before the gesture ends.
     await page.evaluate(async()=>{
