@@ -49,20 +49,15 @@ export function generateLinkedScene({
     if(harmony.length!==3)throw Error('Chord generator must provide a triad on the downbeat');
     // Generate the bass root from exactly the same progression and root,
     // then reuse the chord's diatonic pitches for passing/fifth notes.
-    const harmonicRoot=generateMelodicIdea({length:16,role:'BASS',rhythm:'SPARSE',
-      scale,progression:bar===0?progression:'RISE',root,seed:tickSeed(seed,31)}); // discarded: bar roots resolved below
-    void harmonicRoot;
     const degrees=MELODY_PROGRESSIONS[progression],pcs=MELODY_SCALES[scale];
     const rootClass=(root+pcs[degrees[bar%degrees.length]])%12;
     const rootNote=48+rootClass;
-    const fifthClass=(rootClass+(harmony[2]-harmony[0]+120)%12)%12;
     // Chord voicings can invert; choose the chord tone nearest 7 semitones
     // above the root, including diminished fifth where appropriate.
     const pitchClasses=harmony.map(n=>n%12);
     const nextTone=pitchClasses.map(pc=>(pc-rootClass+12)%12)
       .filter(d=>d>=5).sort((a,b)=>Math.abs(a-7)-Math.abs(b-7))[0]??7;
     const fifth=rootNote+nextTone;
-    void fifthClass;
     const kicks=Array.from({length:end-start},(_,i)=>start+i).filter(i=>kickAt(drums,i));
     if(!kicks.includes(start))throw Error('Groove must start each bar with a kick');
     const chosen=feel==='DRIVE'?kicks:
@@ -79,7 +74,7 @@ export function generateLinkedScene({
     const hats=Array.from({length:end-start},(_,i)=>start+i)
       .filter(i=>hatAt(drums,i)&&i>start);
     const candidate=hats.length?hats:[start+2,start+6,start+10,start+14].filter(i=>i<end);
-    const chosenArp=feel==='DRIVE'?candidate.filter((_,j)=>j%1===0).slice(0,7):
+    const chosenArp=feel==='DRIVE'?candidate.slice(0,7):
       feel==='TIGHT'?candidate.filter((_,j)=>j%2===0).slice(0,4):
       candidate.filter((_,j)=>j%3===0).slice(0,3);
     for(let j=0;j<chosenArp.length;j++){
