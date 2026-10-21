@@ -435,6 +435,8 @@ try{
       'One click from Pattern opens Sound for the selected track');
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    assert.equal(await page.locator('#scope-canvas').isVisible(),true);
+    assert.match(await page.locator('#scope-state').textContent(),/PLAY OR AUDITION/);
     assert.equal(await page.locator('.sound-viz').count(),3);
     assert.equal(await page.locator('#viz-env-handles circle').count(),4);
     assert.match(await page.locator('#viz-env-line').getAttribute('d'),/^M /);
@@ -488,6 +490,10 @@ try{
     await page.locator('#play').click();
     await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING / SLOOP WASM'),
       {timeout:15000});
+    await page.waitForFunction(()=>document.getElementById('scope-state').textContent.startsWith('LIVE / DSP AUDIO'),
+      {timeout:15000});
+    assert.match(await page.locator('#scope-peak').textContent(),/^PEAK \d+%$/,
+      'Oscilloscope reports observed output from SLOOP AudioWorklet');
     const nativeFilter=page.locator('#sound-lfo .sound-control[data-param="14"] input');
     await page.evaluate(()=>{
       const range=document.querySelector('#sound-lfo .sound-control[data-param="14"] input');
