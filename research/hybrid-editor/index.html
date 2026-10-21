@@ -246,49 +246,73 @@
     <label id="preset-wrap">FACTORY SOUND<select id="preset-select" aria-label="Factory preset"></select></label>
     <label id="kit-wrap" hidden>DRUM KIT<select id="kit-select" aria-label="Drum kit"></select></label>
   </div>
-  <div class="sound-scope" id="sound-scope">
+  <details class="sound-scope" id="sound-scope"><summary>OSCILLOSCOPE <span>REAL SLOOP OUTPUT</span></summary>
     <div class="scope-head"><div><small>AUDIO / ORIGINAL SLOOP ENGINE</small><strong>Oscilloscope</strong></div>
       <div class="scope-stats"><span id="scope-state">PLAY OR AUDITION TO SEE SIGNAL</span><strong id="scope-peak">—</strong></div>
     </div>
     <canvas id="scope-canvas" width="960" height="180" role="img" aria-label="Actual mono sum of the native SLOOP audio output"></canvas>
     <div class="scope-footer">REAL OUTPUT · stereo sum · 96-point sample · ~11 updates/sec</div>
-  </div>
-  <section class="sound-visuals" id="sound-visuals" aria-label="Visual sound shaping">
+  </details>
+  <section class="sound-visuals" id="sound-visuals" aria-label="Direct sound controls">
     <div class="sound-viz" data-viz="envelope">
-      <button class="viz-jump" type="button" data-sound-jump="envelope" aria-label="Edit amplitude envelope">
-        <span class="viz-title">ENVELOPE</span><span class="viz-cta">EDIT ↗</span>
-      </button>
-      <svg id="viz-envelope" viewBox="0 0 320 112" role="img" aria-label="ADSR amplitude envelope shape">
+      <div class="viz-heading"><strong>ENVELOPE</strong><span>DRAG NODES</span></div>
+      <svg id="viz-envelope" viewBox="0 0 320 112" role="img" aria-label="Amplitude envelope, drag control points to adjust native ADSR">
         <path class="viz-grid" d="M 8 98 H 310 M 8 55 H 310 M 8 12 H 310"/>
         <path class="viz-area" id="viz-env-fill" d=""/>
         <path class="viz-line" id="viz-env-line" d=""/>
         <g id="viz-env-handles"></g>
       </svg>
-      <div class="viz-caption" id="viz-envelope-caption">Attack · Decay · Sustain · Release</div>
+      <div class="viz-fields viz-fields-four">
+        <label>A<input id="viz-env-attack" data-native-param="1" type="number" min="0" max="127" step="1" aria-label="Envelope attack"></label>
+        <label>D<input id="viz-env-decay" data-native-param="2" type="number" min="0" max="127" step="1" aria-label="Envelope decay"></label>
+        <label>S<input id="viz-env-sustain" data-native-param="3" type="number" min="0" max="127" step="1" aria-label="Envelope sustain"></label>
+        <label>R<input id="viz-env-release" data-native-param="4" type="number" min="0" max="127" step="1" aria-label="Envelope release"></label>
+      </div>
+      <div class="viz-caption" id="viz-envelope-caption">Move a node or enter native values.</div>
     </div>
     <div class="sound-viz" data-viz="lfo">
-      <button class="viz-jump" type="button" data-sound-jump="lfo" aria-label="Edit LFO modulation">
-        <span class="viz-title">LFO</span><span class="viz-cta">EDIT ↗</span>
-      </button>
-      <svg id="viz-lfo" viewBox="0 0 320 112" role="img" aria-label="LFO wave shape preview">
+      <div class="viz-heading"><strong>LFO</strong><span>DRAG X: RATE · Y: DEPTH</span></div>
+      <svg id="viz-lfo" class="viz-edit-surface" viewBox="0 0 320 112" role="img" aria-label="Drag the wave to edit native LFO rate and destination modulation depth">
         <path class="viz-grid" d="M 8 56 H 310 M 8 12 H 310 M 8 100 H 310"/>
         <path class="viz-line" id="viz-lfo-line" d=""/>
+        <circle id="viz-lfo-point" class="viz-control-point" r="5" cx="160" cy="56"/>
       </svg>
-      <div class="viz-caption" id="viz-lfo-caption">Wave · Rate · Modulation</div>
+      <div class="viz-fields viz-fields-lfo">
+        <label>WAVE<select id="viz-lfo-wave" data-native-param="10" aria-label="LFO waveform"></select></label>
+        <label>RATE<input id="viz-lfo-rate" data-native-param="9" type="number" step="1" aria-label="LFO rate"></label>
+        <label>TO<select id="viz-lfo-target" aria-label="LFO modulation destination">
+          <option value="14">FILTER</option><option value="13">PITCH</option>
+          <option value="15">SHAPE</option><option value="16">AMP</option>
+        </select></label>
+        <label>DEPTH<input id="viz-lfo-depth" type="number" step="1" aria-label="LFO depth for selected destination"></label>
+      </div>
+      <div class="viz-caption" id="viz-lfo-caption">Drag the graph to edit both axes.</div>
     </div>
     <div class="sound-viz" data-viz="filter">
-      <button class="viz-jump" type="button" data-sound-jump="filter" aria-label="Edit filter shaping">
-        <span class="viz-title">FILTER</span><span class="viz-cta">EDIT ↗</span>
-      </button>
-      <svg id="viz-filter" viewBox="0 0 320 112" role="img" aria-label="Schematic filter shape preview">
+      <div class="viz-heading"><strong>TRACK FILTER</strong><span>DRAG X: TILT · Y: OFFSET</span></div>
+      <svg id="viz-filter" class="viz-edit-surface" viewBox="0 0 320 112" role="img" aria-label="Drag to edit SLOOP track filter tone and engine filter offset">
         <path class="viz-grid" d="M 8 98 H 310 M 8 55 H 310 M 8 12 H 310"/>
         <path class="viz-area" id="viz-filter-fill" d=""/>
         <path class="viz-line" id="viz-filter-line" d=""/>
+        <circle id="viz-filter-point" class="viz-control-point" r="5" cx="160" cy="56"/>
       </svg>
-      <div class="viz-caption" id="viz-filter-caption">Cutoff / resonance-style representation · schematic</div>
+      <div class="viz-fields viz-fields-filter">
+        <label>TILT<input id="viz-filter-tilt" data-native-param="50" type="number" step="1" aria-label="Track filter tilt, negative low-pass, positive high-pass"></label>
+        <label>OFFSET<input id="viz-filter-offset" data-native-param="5" type="number" step="1" aria-label="Engine filter offset"></label>
+      </div>
+      <div class="viz-caption" id="viz-filter-caption">LP ← 0 = open → HP · schematic tone curve.</div>
     </div>
   </section>
-  <nav class="sound-pages" id="sound-pages" aria-label="Sound section">
+  <section class="sound-page" data-page="tone">
+    <div class="sound-section"><div class="section-title">INSTRUMENT CONTROLS <span class="section-info">LIVE · ORIGINAL SLOOP DSP</span></div><div class="sound-controls sound-dials" id="sound-macros"></div></div>
+    <details class="sound-extras" id="tone-extras"><summary>FILTER · PITCH · OTHER CONTROLS</summary>
+      <div class="sound-section"><div class="sound-controls" id="sound-shape"></div></div>
+    </details>
+  </section>
+
+  <details class="sound-more" id="sound-more">
+    <summary>MORE SOUND PARAMETERS <span>FX · SEQUENCER · MIDI · FULL NATIVE CONTROLS</span></summary>
+      <nav class="sound-pages" id="sound-pages" aria-label="Sound section">
     <button data-sound-page="tone" aria-pressed="true">TONE</button>
     <button data-sound-page="envelope" aria-pressed="false">ENV</button>
     <button data-sound-page="lfo" aria-pressed="false">LFO</button>
@@ -297,12 +321,6 @@
     <button data-sound-page="mix" aria-pressed="false">MIX</button>
     <button data-sound-page="advanced" aria-pressed="false">ALL</button>
   </nav>
-  <section class="sound-page" data-page="tone">
-    <div class="sound-section"><div class="section-title">INSTRUMENT CONTROLS <span class="section-info">LIVE · ORIGINAL SLOOP DSP</span></div><div class="sound-controls sound-dials" id="sound-macros"></div></div>
-    <details class="sound-extras" id="tone-extras"><summary>FILTER · PITCH · OTHER CONTROLS</summary>
-      <div class="sound-section"><div class="sound-controls" id="sound-shape"></div></div>
-    </details>
-  </section>
   <section class="sound-page" data-page="envelope" hidden>
     <div class="sound-section"><div class="section-title">AMPLITUDE ENVELOPE <span class="section-info">ATTACK · DECAY · SUSTAIN · RELEASE</span></div><div class="sound-controls" id="sound-envelope"></div></div>
   </section>
@@ -324,7 +342,8 @@
     <details class="sound-advanced" id="all-params"><summary>TRACK PARAMETERS · <span id="param-count">63</span></summary><div class="sound-controls" id="sound-advanced-controls"></div></details>
     <details class="sound-advanced" id="all-globals"><summary>GLOBAL / MASTER · <span id="global-count">49</span></summary><p class="hint">Some device, MIDI, save and system commands are hardware-only. A visible parameter is not proof of browser audio support.</p><div class="sound-controls" id="sound-global-controls"></div></details>
   </section>
-</section>
+
+  </details></section>
 <aside class="inspector" id="inspector"><div class="label">SELECTED STEP</div><div class="selected" id="selected">01</div><div id="notes">Tap a step, then a key.</div><div class="inspector-actions"><button id="rest">REST</button><button id="tie">TIE</button><button id="clear">CLEAR</button></div><label>Velocity <input type="range" id="velocity" min="1" max="127" value="96"></label><output id="velocity-value">96</output><div class="quick-sound" id="quick-sound">
     <div class="quick-sound-head"><strong>TRACK SOUND</strong><button type="button" id="quick-sound-open">FULL EDIT ↗</button></div>
     <div class="quick-sound-name" id="quick-sound-name">Preset</div>
