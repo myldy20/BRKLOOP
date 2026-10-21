@@ -19,7 +19,10 @@ dsp.sync=state=>{
   if(dsp.arrangement)transitions.push(dsp.w.preview_position(3));
   oldSync(state);
 };
-assert.throws(()=>dsp.setArrangement([states[0]]),RangeError);
+assert.throws(()=>dsp.setArrangement([]),RangeError);
+assert.throws(()=>dsp.setArrangement(Array(65).fill(states[0])),RangeError);
+dsp.setArrangement([states[0]]);
+assert.equal(dsp.transport().sectionCount,1,'one section can loop by itself');
 const broken=structuredClone(states);broken[1].tracks[2].p[30]=3;
 assert.throws(()=>dsp.setArrangement(broken),/LEN 64 and DIV/);
 dsp.setArrangement(states);
