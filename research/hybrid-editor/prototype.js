@@ -841,11 +841,12 @@ function renderSoundBrowser(){
   $('sound-browser').hidden=!soundBrowserOpen;
   $('sound-panel').classList.toggle('browsing',soundBrowserOpen);
   $('sound-browse-open').setAttribute('aria-expanded',String(soundBrowserOpen));
-  $('sound-browse-open').textContent=soundBrowserOpen?'CLOSE BROWSER':'BROWSE SOUNDS';
+  const counter=$('sound-favorite-count');
   const count=soundEntries.filter(x=>soundFavorites.has(x.id)&&
     (current().v.track===3?x.kind==='k':x.kind==='s')).length;
-  $('sound-favorite-count').textContent=count?'★ '+count:'';
-  $('sound-browse-open').append($('sound-favorite-count'));
+  counter.textContent=count?'★ '+count:'';
+  $('sound-browse-open').replaceChildren(
+    document.createTextNode((soundBrowserOpen?'CLOSE BROWSER':'BROWSE SOUNDS')+' '),counter);
   for(const id of ['engine-select','preset-select','kit-select'])$(id).disabled=soundBrowserOpen;
   if(!soundBrowserOpen)return;
   const drums=current().v.track===3;
@@ -866,7 +867,7 @@ function renderSoundBrowser(){
     const choose=newEl('button','browser-pick');
     choose.type='button';
     choose.append(newEl('strong','',item.name),newEl('span','',item.category));
-    if(item.id===activeId)choose.append(newEl('small','',''));
+    if(item.id===activeId)choose.append(newEl('small','browser-current','CURRENT'));
     choose.setAttribute('aria-label','Audition '+item.name+' in '+item.category);
     choose.addEventListener('click',()=>void chooseSoundCandidate(item));
     const star=newEl('button','browser-star',soundFavorites.has(item.id)?'★':'☆');
@@ -957,9 +958,9 @@ function stepSoundCandidate(direction){
   const next=idx<0?(direction>0?0:entries.length-1):
     (idx+direction+entries.length)%entries.length;
   const item=entries[next];
-  const row=$('sound-browser-results').querySelectorAll('.browser-result')[next];
   void chooseSoundCandidate(item);
-  row?.scrollIntoView({block:'nearest'});
+  $('sound-browser-results').querySelectorAll('.browser-result')[next]
+    ?.scrollIntoView({block:'nearest'});
 }
 function renderSound(){
   const {v,track}=current(),drums=v.track===3;
