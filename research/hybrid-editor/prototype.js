@@ -559,6 +559,76 @@ function attachEnvelopeEditor(){
     e.preventDefault();
   });
 }
+// Graphs edit the real native parameter stream in place, including on
+// pointermove while held. A two-axis gesture is ONE undoable session.
+function vizParamInputValue(el){
+  const id=el.id==='viz-lfo-depth'?Number($('viz-lfo-target').value):
+    Number(el.dataset.nativeParam);
+  const d=bank.trackControls[id],raw=Number(el.value);
+  if(!d||el.disabled||el.value===''||!Number.isInteger(raw)||
+     raw<d.min||raw>d.max)return null;
+  return {id,value:raw};
+}
+function attachDirectSoundEditors(){
+  for(const el of document.querySelectorAll('.sound-visuals [data-native-param], #viz-lfo-depth')){
+    if(el.tagName==='SELECT'){
+      el.addEventListener('change',()=>{
+        const got=vizParamInputValue(el);
+        if(got)writeNativeTrackParam(got.id,got.value,true);
+      });
+    }else{
+      el.addEventListener('input',()=>{
+        const got=vizParamInputValue(el);
+        if(got&&current().track.p[got.id]!==got.value)
+          writeNativeTrackParam(got.id,got.value,false);
+      });
+      el.addEventListener('change',()=>{
+        const got=vizParamInputValue(el);
+        if(got)writeNativeTrackParam(got.id,got.value,true);
+        else updateSoundVisuals();
+      });
+    }
+  }
+  $('viz-lfo-target').addEventListener('change',updateSoundVisuals);
+  for(const [svgId,axes] of [
+    ['viz-lfo',()=>[current().track.p[60]?60:9,Number($('viz-lfo-target').value)]],
+    ['viz-filter',()=>[50,5]]
+  ]){
+    const surface=$(svgId);
+    let pointer=null;
+    const apply=e=>{
+      if(!pointer||e.pointerId!==pointer.id)return;
+      const bounds=surface.getBoundingClientRect();
+      if(!bounds.width||!bounds.height)return;
+      const nx=clamp((e.clientX-bounds.left)/bounds.width,0,1);
+      const ny=clamp(1-(e.clientY-bounds.top)/bounds.height,0,1);
+      const [xParam,yParam]=pointer.axes;
+      for(const [id,norm]of [[xParam,nx],[yParam,ny]]){
+        const d=bank.trackControls[id];
+        const value=clamp(Math.round(d.min+norm*(d.max-d.min)),d.min,d.max);
+        if(current().track.p[id]!==value)writeNativeTrackParam(id,value,false);
+      }
+    };
+    surface.addEventListener('pointerdown',e=>{
+      if(e.button!==0||current().v.track===3)return;
+      e.preventDefault();
+      pointer={id:e.pointerId,axes:axes()};
+      surface.setPointerCapture(e.pointerId);
+      apply(e);
+    });
+    surface.addEventListener('pointermove',apply);
+    const end=e=>{
+      if(!pointer||pointer.id!==e.pointerId)return;
+      const first=pointer.axes[0];
+      if(e.type==='pointerup')apply(e);
+      pointer=null;
+      // All changes made within the gesture are one Undo operation.
+      writeNativeTrackParam(first,current().track.p[first],true);
+    };
+    surface.addEventListener('pointerup',end);
+    surface.addEventListener('pointercancel',end);
+  }
+}
 function rotaryControl(container,descriptor,value,command,displayName,paramId){
   if(!descriptor||descriptor.max<=descriptor.min)return;
   const label=newEl('label','sound-control dial-control');
@@ -1179,17 +1249,12 @@ function render(){
 const initial=session.getView();session.select(initial.track,0);render();
 drawScope();
 attachEnvelopeEditor();
-for(const button of document.querySelectorAll('[data-sound-jump]')){
-  button.addEventListener('click',()=>{
-    const page=button.dataset.soundJump;
-    if(page==='filter'){
-      soundPage='tone';
-      $('tone-extras').open=true;
-    }else soundPage=page;
-    renderSound();
-    $('sound-pages').scrollIntoView({block:'nearest'});
-  });
-}
+attachDirectSoundEditors();
+$('sound-more').addEventListener('toggle',()=>{
+  if(!$('sound-more').open&&soundPage!=='tone'){
+    soundPage='tone';renderSound();
+  }
+});
 $('sound-audition').addEventListener('click',async()=>{
   const {v,track}=current();
   try{
