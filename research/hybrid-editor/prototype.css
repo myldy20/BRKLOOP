@@ -788,3 +788,74 @@ footer{color:#7f8c9d;}
  .fx-direct-knobs .dial-control{min-height:105px;}
  .fx-direct-knobs .dial-body{width:50px;height:50px;}
 }
+
+/* Original SLOOP factory bank: searchable, audition-first and light on
+   navigation. Full synth/dsp editors are suppressed during audition. */
+.sound-selectors{grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:end;}
+#sound-browse-open{white-space:nowrap;align-self:end;min-height:44px;padding:7px 13px;
+  background:#21483e;border:1px solid #468d78;color:#d2f4e8;
+  font-size:11px;font-weight:800;}
+#sound-favorite-count{color:#a8ebbf;font-size:10px;margin-left:4px;}
+.sound-browser{padding:13px;border:1px solid #405e5c;border-radius:10px;
+  background:#141d22;margin:9px 0 14px;min-width:0;}
+.sound-panel.browsing .sound-visuals,.sound-panel.browsing .fx-direct,
+.sound-panel.browsing .sound-page,.sound-panel.browsing .sound-more,
+.sound-panel.browsing .sound-scope{display:none!important;}
+.browser-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.browser-top strong{font-size:15px;letter-spacing:-.02em;}
+.browser-top p{font-size:11px;line-height:1.5;color:#9eafb6;margin:4px 0 0;max-width:650px;}
+#sound-browse-close{min-width:35px;min-height:35px;padding:5px;}
+.browser-filters{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) auto;
+  gap:7px;align-items:end;}
+.browser-filters label{display:grid;min-width:0;gap:6px;font:800 10px/1.3 ui-monospace,Menlo,monospace;color:#b2c4c7;}
+.browser-filters input,.browser-filters select{width:100%;min-width:0;height:41px;padding:7px 9px;
+  border:1px solid #465b63;background:#0e171d;color:#e4f1f0;font-size:12px;}
+#sound-browser-saved{align-self:end;min-height:41px;padding:5px 11px;white-space:nowrap;
+  background:#222d32;font-size:10px;}
+#sound-browser-saved[aria-pressed="true"]{background:#52422c;border-color:#caaa62;color:#ffe4b2;}
+.browser-middle{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin:10px 0 7px;}
+#sound-browser-meta{font:10px/1.5 ui-monospace,Menlo,monospace;color:#98b5af;}
+.browser-nav{display:flex;gap:5px;}
+.browser-nav button{min-width:37px;min-height:31px;font-weight:900;padding:2px;}
+.browser-results{display:grid;gap:3px;max-height:284px;overflow-y:auto;
+  overscroll-behavior:contain;padding:3px;border:1px solid #35464d;border-radius:7px;
+  background:#0c141b;scrollbar-color:#4c7770 #131c22;}
+.browser-result{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:4px;
+  align-items:center;border-radius:5px;border:1px solid transparent;}
+.browser-result.is-preview{background:#223b3a;border-color:#77b8a6;}
+.browser-result.is-current:not(.is-preview){background:#1b2b34;border-color:#385262;}
+.browser-pick{min-width:0;display:flex;align-items:center;justify-content:flex-start;gap:9px;
+  padding:9px 10px;min-height:43px;text-align:left;background:transparent;border:0;box-shadow:none;}
+.browser-pick strong{font-size:12px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.browser-pick span{color:#90a7b5;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.browser-current{color:#6ed4b2;font-size:9px;margin-left:auto;letter-spacing:.06em;}
+.browser-star{border:0;min-height:42px;background:transparent;color:#8d9ba5;
+  font-size:20px;padding:2px;}
+.browser-star[aria-pressed="true"]{color:#e2b669;}
+.browser-empty{padding:18px 12px;text-align:center;color:#a4b3bf;font-size:12px;}
+.browser-footer{display:flex;gap:7px;align-items:center;justify-content:flex-end;
+  flex-wrap:wrap;margin:10px 0 6px;}
+#sound-browser-selection{flex:1 1 230px;font:10px/1.5 ui-monospace,Menlo,monospace;color:#b0c8c3;}
+#sound-browser-cancel,#sound-browser-use{min-height:38px;padding:7px 11px;font-size:10px;font-weight:850;}
+#sound-browser-use:not(:disabled){background:#20634a;border-color:#45ba86;color:#e0fff0;}
+.browser-note{margin:4px 0 0;font-size:10px;line-height:1.45;color:#8298a1;}
+@media(max-width:900px){
+  .sound-selectors{grid-template-columns:1fr 1fr;}
+  #sound-browse-open{grid-column:1/-1;}
+}
+@media(max-width:570px){
+  .sound-browser{padding:9px;}
+  .browser-top strong{font-size:14px;}
+  .browser-filters{grid-template-columns:1fr 1fr;}
+  .browser-filters label:first-child{grid-column:1/-1;}
+  #sound-browser-saved{min-height:41px;}
+  .browser-results{max-height:45vh;}
+  .browser-pick{padding:7px 5px;gap:5px;flex-wrap:wrap;}
+  .browser-pick strong{font-size:11px;}
+  .browser-pick span{font-size:9px;}
+  .browser-current{margin-left:0;}
+  .browser-footer{display:grid;grid-template-columns:1fr 1fr;}
+  #sound-browser-selection{grid-column:1/-1;}
+  #sound-browser-cancel,#sound-browser-use{min-width:0;}
+}
