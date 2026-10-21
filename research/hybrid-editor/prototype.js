@@ -421,9 +421,52 @@ const level=(id,value=current().track.p[id])=>{
 };
 const svgNS='http://www.w3.org/2000/svg';
 function plot(id,path){$(id).setAttribute('d',path);}
+// One visualization = one editor. Every numeric field below is the real
+// SLOOP parameter; every graph gesture previews directly in AudioWorklet.
+function syncVizInput(id,value){
+  const input=$(id);
+  if(input && document.activeElement!==input && input.value!==String(value))
+    input.value=String(value);
+}
+function syncVizBounds(id,parameter){
+  const input=$(id),d=bank.trackControls[parameter];
+  if(!d)return;
+  input.min=String(d.min);input.max=String(d.max);
+}
+function makeVizOptions(id,names,value){
+  const input=$(id);
+  if(!input.options.length)optionList(input,names,value);
+  if(document.activeElement!==input)input.value=String(value);
+}
+function waveFunction(wave,phase){
+  const p=((phase%1)+1)%1;
+  if(wave===0)return Math.sin(2*Math.PI*p);
+  if(wave===1)return 1-4*Math.abs(p-0.5);
+  if(wave===2)return 2*p-1;
+  if(wave===3)return p<0.5?1:-1;
+  // Original SLOOP's fifth LFO choice is sample-and-hold. Fixed seeds for
+  // a stable preview (not an audio-rate simulation or a random animation).
+  const n=Math.floor(phase*4);
+  return ((Math.sin((n+13)*78.233)*43758.5453)%1+1)%1*2-1;
+}
 function updateSoundVisuals(){
-  if(!$('viz-envelope')||$('sound-panel').hidden)return;
+  if(!$('viz-envelope')||$('sound-panel').hidden||current().v.track===3)return;
   const t=current().track;
+  for(const [id,p] of [['viz-env-attack',1],['viz-env-decay',2],
+    ['viz-env-sustain',3],['viz-env-release',4],['viz-lfo-rate',9],
+    ['viz-filter-tilt',50],['viz-filter-offset',5]]){
+    syncVizBounds(id,p);syncVizInput(id,t.p[p]);
+  }
+  const waves=bank.trackControls[10].names||['SIN','TRI','SAW','SQR','S&H'];
+  const syncs=bank.trackControls[60].names||['OFF','4BAR','2BAR','1BAR','1/2',
+    '1/4','1/8','8T','1/16','16T','1/32'];
+  makeVizOptions('viz-lfo-wave',waves,t.p[10]);
+  makeVizOptions('viz-lfo-sync',syncs,t.p[60]);
+  const target=Number($('viz-lfo-target').value);
+  syncVizBounds('viz-lfo-depth',target);
+  syncVizInput('viz-lfo-depth',t.p[target]);
+  $('viz-lfo-rate').disabled=t.p[60]!==0;
+
   const a=level(1),d=level(2),su=level(3),r=level(4);
   const ax=16+a*60,dx=ax+15+d*60,sx=dx+45,rx=sx+16+r*65;
   const sy=100-80*su;
@@ -435,7 +478,7 @@ function updateSoundVisuals(){
   if(!handles.childElementCount){
     for(const [id,label]of [[1,'Attack'],[2,'Decay'],[3,'Sustain'],[4,'Release']]){
       const dot=document.createElementNS(svgNS,'circle');
-      dot.setAttribute('r','6');dot.setAttribute('tabindex','0');
+      dot.setAttribute('r','7');dot.setAttribute('tabindex','0');
       dot.dataset.param=String(id);dot.setAttribute('aria-label','Drag '+label);
       const title=document.createElementNS(svgNS,'title');title.textContent=label;
       dot.append(title);handles.append(dot);
@@ -444,41 +487,46 @@ function updateSoundVisuals(){
   [[ax,20],[dx,sy],[sx,sy],[rx,100]].forEach(([x,y],i)=>{
     const dot=handles.children[i];dot.setAttribute('cx',String(x));dot.setAttribute('cy',String(y));
   });
-  $('viz-envelope-caption').textContent='A '+t.p[1]+' · D '+t.p[2]+
-    ' · S '+t.p[3]+' · R '+t.p[4]+'  / drag points to edit';
-  const rate=level(9),depth=level(14),shape=level(10);
-  const waveIdx=Math.round(shape*5)%5,cycles=1+rate*5,amp=18+depth*24;
-  const wave=[];
+  $('viz-envelope-caption').textContent='Native ADSR · drag points or edit values';
+
+  // Native enum order: SIN, TRI, SAW, SQR, S&H (firmware/src/params.c).
+  const wave=t.p[10],depthDesc=bank.trackControls[target];
+  const depth=t.p[target],depthNorm=depthDesc.max>depthDesc.min?
+    Math.abs(depth)/(Math.max(Math.abs(depthDesc.min),Math.abs(depthDesc.max))):0;
+  const cycles=t.p[60]===0?1+level(9)*4:1+(t.p[60]/10)*4;
+  const polar=t.p[62]===1,amp=8+depthNorm*34;
+  const points=[];
   for(let i=0;i<=150;i++){
-    const x=10+i*2,phase=(i/150*cycles)%1;
-    let y=waveIdx===0?Math.sin(phase*2*Math.PI):
-      waveIdx===1?1-4*Math.abs(phase-.5):
-      waveIdx===2?2*phase-1:
-      waveIdx===3?(phase<.5?1:-1):
-      Math.sin(phase*2*Math.PI)*Math.sin(phase*6*Math.PI);
-    wave.push((i?'L ':'M ')+x.toFixed(1)+' '+(56-y*amp).toFixed(1));
+    const phase=i/150*cycles,raw=waveFunction(wave,phase);
+    const y=56-(polar?(raw+1)*.5:raw)*amp*(depth<0?-1:1);
+    points.push((i?'L ':'M ')+(10+i*2).toFixed(1)+' '+y.toFixed(1));
   }
-  plot('viz-lfo-line',wave.join(' '));
-  $('viz-lfo-caption').textContent='Rate '+t.p[9]+' · Wave '+t.p[10]+
-    ' · Filter depth '+t.p[14]+' / modulation sketch';
-  const cutoff=36+level(50)*235,offset=level(5),shapeType=t.p[58]??0;
+  plot('viz-lfo-line',points.join(' '));
+  $('viz-lfo-point').setAttribute('cx',String(10+level(t.p[60]?60:9)*300));
+  $('viz-lfo-point').setAttribute('cy',String(100-level(target)*88));
+  $('viz-lfo-caption').textContent=t.p[60]?
+    'Tempo sync '+syncs[t.p[60]]+' · X adjusts sync / Y adjusts '+$('viz-lfo-target').selectedOptions[0].text:
+    'X adjusts rate · Y adjusts '+$('viz-lfo-target').selectedOptions[0].text+
+    ' depth · signed modulation';
+
+  // Track filter (P_TFLT) is a *bipolar* tone tilt: negative lowpass,
+  // zero open, positive highpass. Draw an illustrative balance curve rather
+  // than claiming this is a measured filter transfer function.
+  const tilt=t.p[50],off=t.p[5],tNorm=tilt<0?tilt/64:tilt/63;
   const filter=[];
   for(let i=0;i<=120;i++){
-    const x=10+i*2.5;
-    let pass=1/(1+Math.exp((x-cutoff)/12));
-    // This is an explanatory drawing of the controls, not a measured
-    // frequency response or a numerical model of the firmware's filter.
-    if((shapeType%3)===1)pass=1-pass;
-    else if((shapeType%3)===2)pass=4*pass*(1-pass);
-    const bump=offset*.17*Math.exp(-Math.pow((x-cutoff)/17,2));
-    const y=97-75*clamp(pass+bump,0,1);
+    const x=10+i*2.5,n=i/120;
+    const attenuation=Math.abs(tNorm)*Math.pow(tilt<0?n:1-n,1.35);
+    const y=22+attenuation*75;
     filter.push((i?'L ':'M ')+x.toFixed(1)+' '+y.toFixed(1));
   }
   const curve=filter.join(' ');
   plot('viz-filter-line',curve);
   plot('viz-filter-fill',curve+' L 310 100 L 10 100 Z');
-  $('viz-filter-caption').textContent='Track filter '+t.p[50]+
-    ' · Offset '+t.p[5]+' · Type '+t.p[58]+' / schematic';
+  $('viz-filter-point').setAttribute('cx',String(10+level(50)*300));
+  $('viz-filter-point').setAttribute('cy',String(100-level(5)*88));
+  $('viz-filter-caption').textContent='TILT '+tilt+' (LP ← 0 open → HP) · ENGINE OFFSET '+off+
+    ' · schematic';
 }
 function attachEnvelopeEditor(){
   const g=$('viz-env-handles');
@@ -510,6 +558,76 @@ function attachEnvelopeEditor(){
     dot.addEventListener('pointercancel',end);
     e.preventDefault();
   });
+}
+// Graphs edit the real native parameter stream in place, including on
+// pointermove while held. A two-axis gesture is ONE undoable session.
+function vizParamInputValue(el){
+  const id=el.id==='viz-lfo-depth'?Number($('viz-lfo-target').value):
+    Number(el.dataset.nativeParam);
+  const d=bank.trackControls[id],raw=Number(el.value);
+  if(!d||el.disabled||el.value===''||!Number.isInteger(raw)||
+     raw<d.min||raw>d.max)return null;
+  return {id,value:raw};
+}
+function attachDirectSoundEditors(){
+  for(const el of document.querySelectorAll('.sound-visuals [data-native-param], #viz-lfo-depth')){
+    if(el.tagName==='SELECT'){
+      el.addEventListener('change',()=>{
+        const got=vizParamInputValue(el);
+        if(got)writeNativeTrackParam(got.id,got.value,true);
+      });
+    }else{
+      el.addEventListener('input',()=>{
+        const got=vizParamInputValue(el);
+        if(got&&current().track.p[got.id]!==got.value)
+          writeNativeTrackParam(got.id,got.value,false);
+      });
+      el.addEventListener('change',()=>{
+        const got=vizParamInputValue(el);
+        if(got)writeNativeTrackParam(got.id,got.value,true);
+        else updateSoundVisuals();
+      });
+    }
+  }
+  $('viz-lfo-target').addEventListener('change',updateSoundVisuals);
+  for(const [svgId,axes] of [
+    ['viz-lfo',()=>[current().track.p[60]?60:9,Number($('viz-lfo-target').value)]],
+    ['viz-filter',()=>[50,5]]
+  ]){
+    const surface=$(svgId);
+    let pointer=null;
+    const apply=e=>{
+      if(!pointer||e.pointerId!==pointer.id)return;
+      const bounds=surface.getBoundingClientRect();
+      if(!bounds.width||!bounds.height)return;
+      const nx=clamp((e.clientX-bounds.left)/bounds.width,0,1);
+      const ny=clamp(1-(e.clientY-bounds.top)/bounds.height,0,1);
+      const [xParam,yParam]=pointer.axes;
+      for(const [id,norm]of [[xParam,nx],[yParam,ny]]){
+        const d=bank.trackControls[id];
+        const value=clamp(Math.round(d.min+norm*(d.max-d.min)),d.min,d.max);
+        if(current().track.p[id]!==value)writeNativeTrackParam(id,value,false);
+      }
+    };
+    surface.addEventListener('pointerdown',e=>{
+      if(e.button!==0||current().v.track===3)return;
+      e.preventDefault();
+      pointer={id:e.pointerId,axes:axes()};
+      surface.setPointerCapture(e.pointerId);
+      apply(e);
+    });
+    surface.addEventListener('pointermove',apply);
+    const end=e=>{
+      if(!pointer||pointer.id!==e.pointerId)return;
+      const first=pointer.axes[0];
+      if(e.type==='pointerup')apply(e);
+      pointer=null;
+      // All changes made within the gesture are one Undo operation.
+      writeNativeTrackParam(first,current().track.p[first],true);
+    };
+    surface.addEventListener('pointerup',end);
+    surface.addEventListener('pointercancel',end);
+  }
 }
 function rotaryControl(container,descriptor,value,command,displayName,paramId){
   if(!descriptor||descriptor.max<=descriptor.min)return;
@@ -1131,17 +1249,12 @@ function render(){
 const initial=session.getView();session.select(initial.track,0);render();
 drawScope();
 attachEnvelopeEditor();
-for(const button of document.querySelectorAll('[data-sound-jump]')){
-  button.addEventListener('click',()=>{
-    const page=button.dataset.soundJump;
-    if(page==='filter'){
-      soundPage='tone';
-      $('tone-extras').open=true;
-    }else soundPage=page;
-    renderSound();
-    $('sound-pages').scrollIntoView({block:'nearest'});
-  });
-}
+attachDirectSoundEditors();
+$('sound-more').addEventListener('toggle',()=>{
+  if(!$('sound-more').open&&soundPage!=='tone'){
+    soundPage='tone';renderSound();
+  }
+});
 $('sound-audition').addEventListener('click',async()=>{
   const {v,track}=current();
   try{
