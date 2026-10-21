@@ -793,7 +793,9 @@ function applySongSection(){
     if(edited){
       const v=session.getView();
       if(v.step>=64)session.select(v.track,63);
-      player?.sync();render();
+      // Applying a song section is an edit action. Take the user straight
+      // to its native STEP/ROLL score instead of leaving them on the song form.
+      selectWorkspace('pattern');
       status('APPLIED '+songDraft.sections[songIndex].title+
         ' TO EDITOR · original presets retained · one Undo');
     }
