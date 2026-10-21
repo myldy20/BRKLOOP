@@ -243,6 +243,13 @@
     <label id="preset-wrap">FACTORY SOUND<select id="preset-select" aria-label="Factory preset"></select></label>
     <label id="kit-wrap" hidden>DRUM KIT<select id="kit-select" aria-label="Drum kit"></select></label>
   </div>
+  <div class="sound-scope" id="sound-scope">
+    <div class="scope-head"><div><small>AUDIO / ORIGINAL SLOOP ENGINE</small><strong>Oscilloscope</strong></div>
+      <div class="scope-stats"><span id="scope-state">PLAY OR AUDITION TO SEE SIGNAL</span><strong id="scope-peak">—</strong></div>
+    </div>
+    <canvas id="scope-canvas" width="960" height="180" role="img" aria-label="Actual mono sum of the native SLOOP audio output"></canvas>
+    <div class="scope-footer">REAL OUTPUT · stereo sum · 96-point sample · ~11 updates/sec</div>
+  </div>
   <section class="sound-visuals" id="sound-visuals" aria-label="Visual sound shaping">
     <div class="sound-viz" data-viz="envelope">
       <button class="viz-jump" type="button" data-sound-jump="envelope" aria-label="Edit amplitude envelope">
