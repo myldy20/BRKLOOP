@@ -22,7 +22,6 @@
 <div class="roll-pitch-nav" id="roll-pitch-nav" hidden><button id="roll-down" aria-label="Lower piano roll octave">−</button><strong id="roll-range">C3–B3</strong><button id="roll-up" aria-label="Raise piano roll octave">+</button></div>
 <button id="quick-erase" class="quick-erase" aria-label="Erase selected note or step">⌫ ERASE</button></div>
 <div class="edit-hint" id="edit-hint">Tap empty step to place the highlighted pitch. Tap piano key to replace selected step.</div>
-  <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
   <section class="tool-workbench" id="tool-workbench" aria-label="Pattern ideas and transformations">
     <div class="tool-head">
       <div><small>TOOLS / OPTIONAL</small><strong id="tool-workbench-title">Build on your pattern</strong></div>
@@ -34,6 +33,9 @@
       <button id="tool-mutation" type="button" aria-pressed="false" aria-expanded="false">MUTATE</button>
       <button id="tool-scene" type="button" aria-pressed="false" aria-expanded="false">FOUR-TRACK SCENE</button>
     </div>
+  </section>
+  <div id="grid" class="editor-canvas" aria-label="Pattern canvas"></div>
+  <section class="tool-dock" id="tool-dock">
     <div class="tool-content" id="tool-content" hidden>
 <section class="scene-panel" id="scene-panel" aria-label="Compose four linked tracks">
   <div class="scene-heading">
@@ -234,13 +236,58 @@
 <section class="editor sound-panel" id="sound-panel" hidden>
   <div class="sound-header">
     <div class="sound-identity"><small>SOUND WORKSPACE · SLOOP DSP</small><h2 id="sound-title">Wobble</h2><span class="hint" id="sound-subtitle">Native factory preset</span></div>
-    <span class="sound-live"><span class="live-dot"></span> LIVE CONTROL</span>
+    <div class="sound-header-actions">
+      <button type="button" id="sound-audition" aria-label="Hear selected native instrument">▶ HEAR</button>
+      <span class="sound-live"><span class="live-dot"></span> NATIVE DSP</span>
+    </div>
   </div>
   <div class="sound-selectors">
     <label id="engine-wrap">ENGINE<select id="engine-select" aria-label="Sound engine"></select></label>
     <label id="preset-wrap">FACTORY SOUND<select id="preset-select" aria-label="Factory preset"></select></label>
     <label id="kit-wrap" hidden>DRUM KIT<select id="kit-select" aria-label="Drum kit"></select></label>
   </div>
+  <div class="sound-scope" id="sound-scope">
+    <div class="scope-head"><div><small>AUDIO / ORIGINAL SLOOP ENGINE</small><strong>Oscilloscope</strong></div>
+      <div class="scope-stats"><span id="scope-state">PLAY OR AUDITION TO SEE SIGNAL</span><strong id="scope-peak">—</strong></div>
+    </div>
+    <canvas id="scope-canvas" width="960" height="180" role="img" aria-label="Actual mono sum of the native SLOOP audio output"></canvas>
+    <div class="scope-footer">REAL OUTPUT · stereo sum · 96-point sample · ~11 updates/sec</div>
+  </div>
+  <section class="sound-visuals" id="sound-visuals" aria-label="Visual sound shaping">
+    <div class="sound-viz" data-viz="envelope">
+      <button class="viz-jump" type="button" data-sound-jump="envelope" aria-label="Edit amplitude envelope">
+        <span class="viz-title">ENVELOPE</span><span class="viz-cta">EDIT ↗</span>
+      </button>
+      <svg id="viz-envelope" viewBox="0 0 320 112" role="img" aria-label="ADSR amplitude envelope shape">
+        <path class="viz-grid" d="M 8 98 H 310 M 8 55 H 310 M 8 12 H 310"/>
+        <path class="viz-area" id="viz-env-fill" d=""/>
+        <path class="viz-line" id="viz-env-line" d=""/>
+        <g id="viz-env-handles"></g>
+      </svg>
+      <div class="viz-caption" id="viz-envelope-caption">Attack · Decay · Sustain · Release</div>
+    </div>
+    <div class="sound-viz" data-viz="lfo">
+      <button class="viz-jump" type="button" data-sound-jump="lfo" aria-label="Edit LFO modulation">
+        <span class="viz-title">LFO</span><span class="viz-cta">EDIT ↗</span>
+      </button>
+      <svg id="viz-lfo" viewBox="0 0 320 112" role="img" aria-label="LFO wave shape preview">
+        <path class="viz-grid" d="M 8 56 H 310 M 8 12 H 310 M 8 100 H 310"/>
+        <path class="viz-line" id="viz-lfo-line" d=""/>
+      </svg>
+      <div class="viz-caption" id="viz-lfo-caption">Wave · Rate · Modulation</div>
+    </div>
+    <div class="sound-viz" data-viz="filter">
+      <button class="viz-jump" type="button" data-sound-jump="filter" aria-label="Edit filter shaping">
+        <span class="viz-title">FILTER</span><span class="viz-cta">EDIT ↗</span>
+      </button>
+      <svg id="viz-filter" viewBox="0 0 320 112" role="img" aria-label="Schematic filter shape preview">
+        <path class="viz-grid" d="M 8 98 H 310 M 8 55 H 310 M 8 12 H 310"/>
+        <path class="viz-area" id="viz-filter-fill" d=""/>
+        <path class="viz-line" id="viz-filter-line" d=""/>
+      </svg>
+      <div class="viz-caption" id="viz-filter-caption">Cutoff / resonance-style representation · schematic</div>
+    </div>
+  </section>
   <nav class="sound-pages" id="sound-pages" aria-label="Sound section">
     <button data-sound-page="tone" aria-pressed="true">TONE</button>
     <button data-sound-page="envelope" aria-pressed="false">ENV</button>
@@ -251,8 +298,10 @@
     <button data-sound-page="advanced" aria-pressed="false">ALL</button>
   </nav>
   <section class="sound-page" data-page="tone">
-    <div class="sound-section"><div class="section-title">ENGINE PARAMETERS <span class="section-info">8 ORIGINAL SYNTH CONTROLS</span></div><div class="sound-controls" id="sound-macros"></div></div>
-    <div class="sound-section"><div class="section-title">FILTER &amp; PITCH</div><div class="sound-controls" id="sound-shape"></div></div>
+    <div class="sound-section"><div class="section-title">INSTRUMENT CONTROLS <span class="section-info">LIVE · ORIGINAL SLOOP DSP</span></div><div class="sound-controls sound-dials" id="sound-macros"></div></div>
+    <details class="sound-extras" id="tone-extras"><summary>FILTER · PITCH · OTHER CONTROLS</summary>
+      <div class="sound-section"><div class="sound-controls" id="sound-shape"></div></div>
+    </details>
   </section>
   <section class="sound-page" data-page="envelope" hidden>
     <div class="sound-section"><div class="section-title">AMPLITUDE ENVELOPE <span class="section-info">ATTACK · DECAY · SUSTAIN · RELEASE</span></div><div class="sound-controls" id="sound-envelope"></div></div>
@@ -276,7 +325,14 @@
     <details class="sound-advanced" id="all-globals"><summary>GLOBAL / MASTER · <span id="global-count">49</span></summary><p class="hint">Some device, MIDI, save and system commands are hardware-only. A visible parameter is not proof of browser audio support.</p><div class="sound-controls" id="sound-global-controls"></div></details>
   </section>
 </section>
-<aside class="inspector" id="inspector"><div class="label">SELECTED STEP</div><div class="selected" id="selected">01</div><div id="notes">Tap a step, then a key.</div><div class="inspector-actions"><button id="rest">REST</button><button id="tie">TIE</button><button id="clear">CLEAR</button></div><label>Velocity <input type="range" id="velocity" min="1" max="127" value="96"></label><output id="velocity-value">96</output><div class="hint">Selection, editing and Undo are shared by Step and Roll.</div></aside>
+<aside class="inspector" id="inspector"><div class="label">SELECTED STEP</div><div class="selected" id="selected">01</div><div id="notes">Tap a step, then a key.</div><div class="inspector-actions"><button id="rest">REST</button><button id="tie">TIE</button><button id="clear">CLEAR</button></div><label>Velocity <input type="range" id="velocity" min="1" max="127" value="96"></label><output id="velocity-value">96</output><div class="quick-sound" id="quick-sound">
+    <div class="quick-sound-head"><strong>TRACK SOUND</strong><button type="button" id="quick-sound-open">FULL EDIT ↗</button></div>
+    <div class="quick-sound-name" id="quick-sound-name">Preset</div>
+    <label class="quick-sound-preset">SOUND
+      <select id="quick-sound-preset" aria-label="Choose track sound"></select>
+    </label>
+    <div class="quick-sound-controls" id="quick-sound-controls"></div>
+  </div></aside>
 </main>
 <div class="keyboard-area" id="keyboard-area">
 <div class="keys-head"><div><small>LIVE KEYBOARD</small><strong id="key-label">C3 – C4</strong></div><div><button id="toggle-keyboard" aria-pressed="true">HIDE KEYS</button><button id="oct-down" aria-label="Octave down">−</button><button id="oct-up" aria-label="Octave up">+</button><button id="chord" aria-pressed="false">CHORD</button><button id="chord-done" hidden>Done</button><button id="chord-cancel" hidden>Cancel</button></div></div>

@@ -154,6 +154,15 @@ if (typeof registerProcessor === 'function') {
       }
       if (this.meterFrames >= 4096) {
         message.peak = this.peak;
+        // Actual stereo-mix samples emitted by native SLOOP, decimated to
+        // 96 points at meter rate (~10.8 Hz). Zero synthetic oscillators,
+        // no FFT dependency, no per-block messages on the audio thread.
+        const a=outputs[0][0],b=outputs[0][1],wave=new Float32Array(96);
+        for(let i=0;i<wave.length;i++){
+          const k=Math.min(a.length-1,Math.floor(i*a.length/wave.length));
+          wave[i]=(a[k]+b[k])*.5;
+        }
+        message.wave=wave;
         this.meterFrames = 0; this.peak = 0;
       }
       if (message.transport || message.peak != null) this.port.postMessage(message);

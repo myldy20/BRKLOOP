@@ -567,3 +567,146 @@ footer{color:#7f8c9d;}
  .song-more-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
  .song-more-actions button{min-width:0;padding:7px 4px;white-space:normal;}
 }
+
+/* Instrument desk: three reactive shapes give a mental model of the sound.
+   Graphs are deliberate parameter illustrations, never fake audio analyzers. */
+.sound-panel{background:#0f1117;border:1px solid #30343d;padding:16px;}
+.sound-header{border-bottom-color:#282f3b;}
+.sound-visuals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;margin:13px 0 15px;}
+.sound-viz{min-width:0;padding:13px 13px 10px;border-radius:10px;
+  border:1px solid #343e4b;background:linear-gradient(158deg,#1c2330 0%,#10161d 80%);
+  box-shadow:inset 0 1px 0 #ffffff0c,0 4px 15px #0003;}
+.sound-viz[data-viz="envelope"]{--viz-color:#68dcb2;}
+.sound-viz[data-viz="lfo"]{--viz-color:#ffcb79;}
+.sound-viz[data-viz="filter"]{--viz-color:#7eaafa;}
+.viz-jump{display:flex;justify-content:space-between;align-items:center;
+  width:100%;min-height:28px;padding:0;margin-bottom:3px;border:0;box-shadow:none;
+  text-align:left;background:transparent;color:#f3f6fa;border-radius:0;}
+.viz-title{font-size:11px;letter-spacing:.13em;font-weight:900;}
+.viz-cta{font:10px/1.2 ui-monospace,Menlo,monospace;color:var(--viz-color);}
+.sound-viz svg{display:block;width:100%;height:123px;overflow:visible;touch-action:pan-y;}
+.sound-viz .viz-grid{fill:none;stroke:#556276;stroke-opacity:.28;stroke-width:1;
+  stroke-dasharray:3 5;}
+.sound-viz .viz-area{fill:var(--viz-color);fill-opacity:.11;stroke:none;}
+.sound-viz .viz-line{fill:none;stroke:var(--viz-color);stroke-width:2.5;
+  stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--viz-color) 40%,transparent));}
+.viz-caption{min-height:32px;padding-top:6px;border-top:1px solid #313e4b;
+  color:#a7b4c4;font:10px/1.55 ui-monospace,Menlo,monospace;}
+#viz-env-handles circle{fill:#111820;stroke:var(--viz-color);stroke-width:3;
+  cursor:grab;touch-action:none;}
+#viz-env-handles circle:active{cursor:grabbing;fill:var(--viz-color);}
+#viz-env-handles circle:focus-visible{outline:none;stroke:#fff;stroke-width:4;}
+.sound-page[data-page="tone"] .sound-section:first-child{margin-top:8px;}
+.sound-dials{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;}
+.sound-control.dial-control{display:flex;flex-direction:column;align-items:center;
+  gap:7px;justify-content:center;min-height:146px;padding:11px 6px 12px;
+  background:#171d27;border:1px solid #303c4c;border-radius:9px;}
+.dial-control .control-name{min-height:28px;max-width:100%;font-size:11px;
+  text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.25;}
+.dial-control .control-value{font:800 15px/1 ui-monospace,Menlo,monospace;color:#e4f0fd;}
+.dial-body{position:relative;display:grid;place-items:center;width:78px;height:78px;
+  cursor:ns-resize;touch-action:none;}
+.dial-face{position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 225deg,var(--accent) 0deg var(--dial-progress),
+    #343e4d var(--dial-progress) 270deg,transparent 270deg);
+  border:0;filter:drop-shadow(0 3px 6px #0008);}
+.dial-face:before{content:'';position:absolute;inset:7px;border-radius:50%;
+  background:radial-gradient(circle at 39% 27%,#384356,#1c2430 57%,#111721 83%);
+  border:1px solid #576172;box-shadow:inset 0 -5px 8px #0009,0 2px 8px #0005;}
+.dial-pointer{position:absolute;inset:0;pointer-events:none;
+  transform:rotate(var(--dial-angle));}
+.dial-pointer:before{content:'';position:absolute;left:50%;top:13px;transform:translateX(-50%);
+  width:3px;height:17px;border-radius:3px;background:#f0f5ff;box-shadow:0 0 4px #fff9;}
+.dial-native{position:absolute;inset:0;width:100%!important;height:100%!important;
+  margin:0!important;opacity:0;cursor:ns-resize;pointer-events:none;}
+.dial-body:focus-within{outline:2px solid var(--accent);outline-offset:3px;border-radius:50%;}
+.sound-extras{margin-top:13px;border:1px solid #333e50;border-radius:8px;
+  padding:0 12px;background:#101721;}
+.sound-extras>summary{cursor:pointer;padding:12px 4px;min-height:42px;
+  list-style:none;color:#b9c9d9;font:bold 11px/1.35 ui-monospace,Menlo,monospace;}
+.sound-extras>summary::-webkit-details-marker{display:none;}
+.sound-extras>summary:after{content:' +';color:var(--accent);}
+.sound-extras[open]>summary:after{content:' −';}
+.sound-extras .sound-section{border-top:1px solid #343d4a;margin-top:0!important;padding:13px 0;}
+.sound-extras .sound-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
+.tool-workbench{margin-top:2px;margin-bottom:9px;padding:7px 9px;}
+.tool-head{margin-bottom:5px;}
+.tool-head strong{font-size:12px;}
+.tool-head small{font-size:9px;}
+.tool-context{display:none;}
+.tool-choices{display:flex;flex-wrap:nowrap;gap:5px;}
+.tool-choices button{flex:1;min-width:0;min-height:34px;font-size:10px;}
+.tool-dock{margin-top:8px;}
+.tool-dock .tool-content{margin-top:0;padding-top:0;border-top:0;}
+.tool-dock .tool-content>section{margin-top:0!important;}
+.quick-sound{border-top:1px solid #334154;padding-top:10px;margin-top:7px;
+  display:grid;gap:7px;}
+.quick-sound-head{display:flex;justify-content:space-between;align-items:center;gap:5px;}
+.quick-sound-head strong{font:900 10px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.08em;}
+.quick-sound-head button{min-height:30px;font-size:9px;font-weight:800;padding:3px 8px;
+  border-color:#42647d;background:#1a2d42;color:#b9e2ff;}
+.quick-sound-name{font-size:12px;color:#f0f4ff;font-weight:850;}
+.quick-sound-preset{display:grid;gap:4px;font:800 9px/1.3 ui-monospace,Menlo,monospace;}
+.quick-sound-preset select{width:100%;min-width:0;height:36px;padding:4px 6px;
+  font-size:12px;}
+.quick-sound-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
+.quick-sound-controls .dial-control{min-height:116px;padding:7px 1px;gap:5px;}
+.quick-sound-controls .dial-body{width:61px;height:61px;}
+.quick-sound-controls .dial-pointer:before{top:11px;height:12px;}
+.quick-sound-controls .dial-face:before{inset:6px;}
+.quick-sound-controls .control-name{font-size:10px;min-height:16px;}
+.quick-sound-controls .control-value{font-size:12px;}
+@media(max-width:940px){
+ .sound-visuals{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+ .sound-viz{padding:9px;}
+ .sound-viz svg{height:95px;}
+ .sound-dials{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important;}
+ .sound-panel{padding:12px;}
+}
+@media(max-width:650px){
+ .sound-visuals{grid-template-columns:1fr;gap:7px;}
+ .sound-viz{padding:8px 11px;}
+ .sound-viz svg{height:85px;}
+ .viz-caption{min-height:0;}
+ .sound-dials{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .sound-control.dial-control{min-height:125px;}
+ .dial-body{width:70px;height:70px;}
+ .tool-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+ .tool-choices button{min-height:36px;}
+ .quick-sound{grid-column:1/-1;}
+ .quick-sound-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(prefers-reduced-motion:reduce){.sound-viz,.dial-body{transition:none!important;}}
+
+/* Actual output monitor, driven by samples emitted by the SLOOP WASM audio
+   thread at the existing meter rate. No fabricated spectra or animations. */
+.sound-scope{margin:13px 0 10px;padding:12px 13px 8px;border:1px solid #385363;
+  border-radius:10px;background:#0b1019;box-shadow:inset 0 1px 0 #ffffff0a;}
+.scope-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.scope-head strong{display:block;font-size:15px;line-height:1.4;letter-spacing:.02em;color:#d6f6ea;}
+.scope-stats{display:flex;align-items:center;gap:10px;font:10px/1.3 ui-monospace,Menlo,monospace;color:#91bcae;}
+.scope-stats strong{color:#68e3c0;min-width:64px;text-align:right;}
+#scope-canvas{display:block;width:100%;height:113px;background:#090f19;
+  border:1px solid #233b4d;border-radius:6px;image-rendering:auto;}
+.scope-footer{font:9px/1.6 ui-monospace,Menlo,monospace;color:#7b9aa2;margin-top:5px;}
+@media(max-width:650px){
+ .sound-scope{padding:9px 10px 7px;margin:7px 0;}
+ #scope-canvas{height:85px;}
+ .scope-stats{font-size:8px;gap:5px;}
+ .scope-head strong{font-size:13px;}
+ .scope-footer{font-size:8px;}
+}
+
+.sound-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+#sound-audition{background:#205a43;border:1px solid #3caa79;color:#e5fff3;
+  font-size:11px;font-weight:900;letter-spacing:.08em;min-height:39px;
+  padding:6px 15px;box-shadow:0 0 11px #1ac78d29,inset 0 1px 0 #ffffff1a;}
+#sound-audition:active{background:#2a7859;}
+@media(max-width:520px){
+ .sound-header-actions{gap:4px;}
+ #sound-audition{min-height:37px;padding:6px 10px;}
+ .sound-live{font-size:8px;}
+}
