@@ -116,6 +116,7 @@ export function editSongArrangement(original,command){
     throw new RangeError('Unknown song edit');
   const song=clone(original),list=song.sections;
   if(command.type==='evolve'){
+    if(song.sections.every(s=>s.locked))return song;
     song.seed=(integer(song.seed,0,0xffffffff,'seed')+1)>>>0;
     let count=0;
     song.sections= list.map((s,i)=>{
