@@ -16,6 +16,45 @@
   <div class="edit-options"><label>LEN <input id="length" type="number" min="1" max="64" value="16"></label><label>DIV <select id="division"></select></label><label class="auto-label">AUTO <input id="auto" type="checkbox"></label>
 <div class="roll-pitch-nav" id="roll-pitch-nav" hidden><button id="roll-down" aria-label="Lower piano roll octave">−</button><strong id="roll-range">C3–B3</strong><button id="roll-up" aria-label="Raise piano roll octave">+</button></div>
 <button id="quick-erase" class="quick-erase" aria-label="Erase selected note or step">⌫ ERASE</button></div>
+<section class="song-panel" id="song-panel" aria-label="Song arranger">
+  <div class="song-head"><div><small>SONG / ARRANGEMENT</small><strong>Arrange a song</strong>
+    <p>Generate distinct intro, verse, chorus, breakdown and outro sections. Audition each part or play the complete song with native SLOOP.</p>
+  </div><span class="song-chip" id="song-chip">MULTI-SCENE</span></div>
+  <div class="song-controls">
+    <label>FORM<select id="song-form" aria-label="Song form">
+      <option value="FULL">FULL · 8 SECTIONS</option><option value="SHORT">SHORT · 4 SECTIONS</option>
+    </select></label>
+    <label>ROOT<select id="song-root" aria-label="Song key root">
+      <option value="0">C</option><option value="1">C♯</option><option value="2">D</option>
+      <option value="3">D♯</option><option value="4">E</option><option value="5">F</option>
+      <option value="6">F♯</option><option value="7">G</option><option value="8">G♯</option>
+      <option value="9" selected>A</option><option value="10">A♯</option><option value="11">B</option>
+    </select></label>
+    <label>SCALE<select id="song-scale" aria-label="Song scale">
+      <option value="MINOR">MINOR</option><option value="MAJOR">MAJOR</option>
+    </select></label>
+    <label>HARMONY<select id="song-progression" aria-label="Song progression">
+      <option value="MINOR">i–VI–III–VII</option><option value="POP">I–V–vi–IV</option>
+      <option value="CYCLE">I–vi–IV–V</option><option value="RISE">I–IV–V–vi</option>
+    </select></label>
+    <label>GROOVE<select id="song-groove" aria-label="Song groove">
+      <option value="DNB">DRUM &amp; BASS</option><option value="BREAK">BREAK</option>
+      <option value="HOUSE">HOUSE</option><option value="BOOM_BAP">BOOM BAP</option>
+      <option value="AMAPIANO">AMAPIANO</option>
+    </select></label>
+  </div>
+  <div class="groove-actions song-actions">
+    <button id="song-generate" type="button">GENERATE SONG</button>
+    <button id="song-next" type="button">NEXT VERSION</button>
+    <button id="song-play" type="button" disabled>▶ PLAY SONG</button>
+    <button id="song-apply" type="button" disabled>APPLY SECTION</button>
+    <button id="song-export" type="button" disabled>EXPORT JSON</button>
+    <button id="song-cancel" type="button" disabled>CANCEL</button>
+  </div>
+  <div class="song-now" id="song-now" role="status" aria-live="polite">Generate a song. Your current four-track pattern is preserved until Apply Section.</div>
+  <div class="song-timeline" id="song-timeline" aria-label="Song section timeline"></div>
+  <p class="song-footnote">Each section is a native 64-step, four-track scene. Play Song loops through the form; use Stop to finish. Apply Section copies only the selected section into the editor in one Undo. Export JSON stores the full arrangement.</p>
+</section>
 <section class="scene-panel" id="scene-panel" aria-label="Compose four linked tracks">
   <div class="scene-heading">
     <div><small>COMPOSE / FOUR TRACKS</small><strong>Build a scene</strong>
