@@ -368,6 +368,172 @@ const soundLabels={
   58:'Filter type',59:'Envelope sync',60:'LFO sync',
   61:'LFO retrigger',62:'LFO polarity'
 };
+// Compact controls share the exact same native SLOOP parameter pipeline as
+// the full editor. Gestures are grouped in Undo, while each move reaches WASM.
+function writeNativeTrackParam(id,value,final){
+  const v=current().v;
+  if(final){
+    if(session.finishGesture()){player?.sync();render();}
+    else if(current().track.p[id]!==value)
+      commit({type:'setTrackParam',track:v.track,param:id,value});
+  }else{
+    session.preview({type:'setTrackParam',track:v.track,param:id,value});
+    player?.trackParam(v.track,id,value);
+    updateSoundVisuals();
+  }
+}
+const level=(id,value=current().track.p[id])=>{
+  const d=bank.trackControls[id];
+  return d&&d.max>d.min?clamp((value-d.min)/(d.max-d.min),0,1):0.5;
+};
+const svgNS='http://www.w3.org/2000/svg';
+function plot(id,path){$(id).setAttribute('d',path);}
+function updateSoundVisuals(){
+  if(!$('viz-envelope')||$('sound-panel').hidden)return;
+  const t=current().track;
+  const a=level(1),d=level(2),su=level(3),r=level(4);
+  const ax=16+a*60,dx=ax+15+d*60,sx=dx+45,rx=sx+16+r*65;
+  const sy=100-80*su;
+  const env='M 12 100 L '+ax+' 20 L '+dx+' '+sy+' L '+sx+' '+sy+
+    ' L '+rx+' 100 L 308 100';
+  plot('viz-env-line',env);
+  plot('viz-env-fill',env+' L 12 100 Z');
+  const handles=$('viz-env-handles');
+  if(!handles.childElementCount){
+    for(const [id,label]of [[1,'Attack'],[2,'Decay'],[3,'Sustain'],[4,'Release']]){
+      const dot=document.createElementNS(svgNS,'circle');
+      dot.setAttribute('r','6');dot.setAttribute('tabindex','0');
+      dot.dataset.param=String(id);dot.setAttribute('aria-label','Drag '+label);
+      const title=document.createElementNS(svgNS,'title');title.textContent=label;
+      dot.append(title);handles.append(dot);
+    }
+  }
+  [[ax,20],[dx,sy],[sx,sy],[rx,100]].forEach(([x,y],i)=>{
+    const dot=handles.children[i];dot.setAttribute('cx',String(x));dot.setAttribute('cy',String(y));
+  });
+  $('viz-envelope-caption').textContent='A '+t.p[1]+' · D '+t.p[2]+
+    ' · S '+t.p[3]+' · R '+t.p[4]+'  / drag points to edit';
+  const rate=level(9),depth=level(14),shape=level(10);
+  const waveIdx=Math.round(shape*5)%5,cycles=1+rate*5,amp=18+depth*24;
+  const wave=[];
+  for(let i=0;i<=150;i++){
+    const x=10+i*2,phase=(i/150*cycles)%1;
+    let y=waveIdx===0?Math.sin(phase*2*Math.PI):
+      waveIdx===1?1-4*Math.abs(phase-.5):
+      waveIdx===2?2*phase-1:
+      waveIdx===3?(phase<.5?1:-1):
+      Math.sin(phase*2*Math.PI)*Math.sin(phase*6*Math.PI);
+    wave.push((i?'L ':'M ')+x.toFixed(1)+' '+(56-y*amp).toFixed(1));
+  }
+  plot('viz-lfo-line',wave.join(' '));
+  $('viz-lfo-caption').textContent='Rate '+t.p[9]+' · Wave '+t.p[10]+
+    ' · Filter depth '+t.p[14]+' / modulation sketch';
+  const cutoff=36+level(50)*235,offset=level(5),shapeType=t.p[58]??0;
+  const filter=[];
+  for(let i=0;i<=120;i++){
+    const x=10+i*2.5;
+    let pass=1/(1+Math.exp((x-cutoff)/12));
+    // This is an explanatory drawing of the controls, not a measured
+    // frequency response or a numerical model of the firmware's filter.
+    if((shapeType%3)===1)pass=1-pass;
+    else if((shapeType%3)===2)pass=4*pass*(1-pass);
+    const bump=offset*.17*Math.exp(-Math.pow((x-cutoff)/17,2));
+    const y=97-75*clamp(pass+bump,0,1);
+    filter.push((i?'L ':'M ')+x.toFixed(1)+' '+y.toFixed(1));
+  }
+  const curve=filter.join(' ');
+  plot('viz-filter-line',curve);
+  plot('viz-filter-fill',curve+' L 310 100 L 10 100 Z');
+  $('viz-filter-caption').textContent='Track filter '+t.p[50]+
+    ' · Offset '+t.p[5]+' · Type '+t.p[58]+' / schematic';
+}
+function attachEnvelopeEditor(){
+  const g=$('viz-env-handles');
+  g.addEventListener('pointerdown',e=>{
+    const dot=e.target.closest('circle[data-param]');
+    if(!dot||current().v.track===3)return;
+    const id=Number(dot.dataset.param),rect=$('viz-envelope').getBoundingClientRect();
+    const x0=e.clientX,y0=e.clientY,start=current().track.p[id];
+    const descriptor=bank.trackControls[id],width=Math.max(1,rect.width),height=Math.max(1,rect.height);
+    let active=true;
+    const move=event=>{
+      if(!active)return;
+      const delta=id===3?(y0-event.clientY)/height:(event.clientX-x0)/width;
+      const normalized=level(id,start)+delta*2.7;
+      const value=clamp(Math.round(descriptor.min+clamp(normalized,0,1)*(descriptor.max-descriptor.min)),
+        descriptor.min,descriptor.max);
+      if(current().track.p[id]!==value)writeNativeTrackParam(id,value,false);
+    };
+    dot.setPointerCapture(e.pointerId);
+    const end=event=>{
+      if(!active)return;active=false;
+      dot.removeEventListener('pointermove',move);
+      dot.removeEventListener('pointerup',end);
+      dot.removeEventListener('pointercancel',end);
+      writeNativeTrackParam(id,current().track.p[id],true);
+    };
+    dot.addEventListener('pointermove',move);
+    dot.addEventListener('pointerup',end);
+    dot.addEventListener('pointercancel',end);
+    e.preventDefault();
+  });
+}
+function rotaryControl(container,descriptor,value,command,displayName,paramId){
+  if(!descriptor||descriptor.max<=descriptor.min)return;
+  const label=newEl('label','sound-control dial-control');
+  label.dataset.param=String(paramId);
+  label.append(newEl('span','control-name',displayName||descriptor.label));
+  const body=newEl('div','dial-body'),face=newEl('div','dial-face');
+  const pointer=newEl('span','dial-pointer'),input=newEl('input','dial-native');
+  const output=newEl('output','control-value',String(value));
+  input.type='range';input.min=String(descriptor.min);input.max=String(descriptor.max);
+  input.step='1';input.value=String(value);input.setAttribute('aria-label',displayName||descriptor.label);
+  const paint=()=>{
+    const pct=clamp((Number(input.value)-descriptor.min)/(descriptor.max-descriptor.min),0,1);
+    face.style.setProperty('--dial-angle',(pct*270-135)+'deg');
+    face.style.setProperty('--dial-progress',(pct*270)+'deg');
+    output.textContent=input.value;
+  };
+  input.addEventListener('input',()=>{paint();command(Number(input.value),false);});
+  input.addEventListener('change',()=>command(Number(input.value),true));
+  let origin=null;
+  body.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
+    e.preventDefault();input.focus();
+    origin={x:e.clientX,y:e.clientY,start:Number(input.value)};
+    body.setPointerCapture(e.pointerId);
+  });
+  body.addEventListener('pointermove',e=>{
+    if(!origin)return;
+    const delta=(origin.y-e.clientY)+(e.clientX-origin.x)*.55;
+    const next=clamp(Math.round(origin.start+delta*(descriptor.max-descriptor.min)/180),
+      descriptor.min,descriptor.max);
+    if(next!==Number(input.value)){
+      input.value=String(next);input.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  });
+  const finish=()=>{
+    if(!origin)return;origin=null;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  };
+  body.addEventListener('pointerup',finish);
+  body.addEventListener('pointercancel',finish);
+  body.append(face,pointer,input);label.append(body,output);container.append(label);paint();
+}
+function renderQuickSound(){
+  const {v,track}=current(),drums=v.track===3;
+  const currentPreset=drums?(bank.kits[track.p[bank.pe0]]||'KIT'):
+    (bank.engines[track.engine]?.presets[track.preset]?.name||'CUSTOM');
+  $('quick-sound-name').textContent=currentPreset;
+  const choices=$('quick-sound-preset');choices.replaceChildren();
+  const entries=drums?bank.kits.slice(0,37):bank.engines[track.engine].presets.map(x=>x.name);
+  optionList(choices,entries,drums?clamp(track.p[bank.pe0],0,36):track.preset);
+  const control=$('quick-sound-controls');control.replaceChildren();
+  const ids=drums?[0,50]:[0,50];
+  ids.forEach(id=>rotaryControl(control,bank.trackControls[id],track.p[id],
+    (value,final)=>writeNativeTrackParam(id,value,final),
+    id===0?'LEVEL':'FILTER',id));
+}
 function soundControl(container,descriptor,value,command,displayName,paramId){
   if(!descriptor||descriptor.max<=descriptor.min||descriptor.label==='-')return;
   const parent=newEl('label','sound-control');
@@ -416,15 +582,7 @@ function renderSound(){
   for(const page of $('sound-panel').querySelectorAll('.sound-page'))
     page.hidden=page.dataset.page!==soundPage;
   const common=bank.trackControls;
-  const writeParam=(id,value,final)=>{
-    if(final){
-      if(session.finishGesture()){player?.sync();render();}
-      else if(current().track.p[id]!==value)commit({type:'setTrackParam',track:v.track,param:id,value});
-    }else{
-      session.preview({type:'setTrackParam',track:v.track,param:id,value});
-      player?.trackParam(v.track,id,value);
-    }
-  };
+  const writeParam=(id,value,final)=>writeNativeTrackParam(id,value,final);
   const writeGlobal=(id,value,final)=>{
     if(final){
       if(session.finishGesture()){player?.sync();render();}
@@ -444,7 +602,9 @@ function renderSound(){
     if(drums)$('sound-macros').append(newEl('p','sound-help','Choose a kit above. Tap one of the 16 pads below to audition. Track effects and filtering live in FX.'));
     else engine.controls.forEach((c,i)=>{
       const id=bank.pe0+i;
-      soundControl($('sound-macros'),c,track.p[id],(value,final)=>writeParam(id,value,final),c.label,id);
+      const render=(!c.names||!c.names.length)?rotaryControl:soundControl;
+      render($('sound-macros'),c,track.p[id],
+        (value,final)=>writeParam(id,value,final),c.label,id);
     });
     $('sound-shape').closest('.sound-section').hidden=drums;
     if(!drums)showParams('sound-shape',[28,5,6,7,50,58]);
@@ -473,6 +633,8 @@ function renderSound(){
       soundControl($('sound-global-controls'),d,current().state.g[d.id],
         (value,final)=>writeGlobal(d.id,value,final),d.label,d.id);
   }
+  $('sound-visuals').hidden=drums;
+  if(!drums)updateSoundVisuals();
   $('param-count').textContent=String(common.length);
   $('global-count').textContent=String(bank.globalControls.length);
 }
@@ -914,6 +1076,7 @@ function render(){
     renderOptions();
     if(v.mode==='step')renderStep();else renderRoll();
     renderInspector();
+    renderQuickSound();
     // Only the selected tool is rendered. Hidden generators no longer
     // repeatedly create 64-step / multi-track DOM grids on every key press.
     if(activeTool==='groove')renderGroove();
@@ -933,6 +1096,28 @@ function render(){
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+attachEnvelopeEditor();
+for(const button of document.querySelectorAll('[data-sound-jump]')){
+  button.addEventListener('click',()=>{
+    const page=button.dataset.soundJump;
+    if(page==='filter'){
+      soundPage='tone';
+      $('tone-extras').open=true;
+    }else soundPage=page;
+    renderSound();
+    $('sound-pages').scrollIntoView({block:'nearest'});
+  });
+}
+$('quick-sound-open').addEventListener('click',()=>selectWorkspace('sound'));
+$('quick-sound-preset').addEventListener('change',e=>{
+  const {v,track}=current(),index=Number(e.target.value);
+  if(v.track===3)commit({type:'setTrackParam',track:3,param:bank.pe0,value:index});
+  else{
+    const preset=bank.engines[track.engine].presets[index];
+    commit({type:'setFactorySound',track:v.track,engine:track.engine,preset:index,
+      p:preset.p,fm6:preset.fm6});
+  }
+});
 $('sound-pages').addEventListener('click',event=>{
   const button=event.target.closest('button[data-sound-page]');
   if(!button||button.hidden)return;
