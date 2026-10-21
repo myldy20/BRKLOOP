@@ -85,6 +85,37 @@ try{
     await page.locator('#undo').click();
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-scene.png',fullPage:true});
+    // Song arranger is an independent multi-scene sketch. Navigation, native
+    // audio audition and JSON export must not overwrite editable SLOOP scores.
+    assert.equal(await page.locator('#song-panel').isVisible(),true);
+    assert.equal(await page.locator('#song-play').isDisabled(),true);
+    await page.locator('#song-generate').click();
+    assert.equal(await page.locator('#song-timeline button').count(),8);
+    assert.equal(await page.locator('#song-apply').isEnabled(),true);
+    assert.equal(await page.locator('#song-chip').textContent(),'32 BARS · 8 SECTIONS');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'Song planning leaves real editor score untouched');
+    await page.locator('#song-next').click();
+    assert.equal(await page.locator('#song-timeline button').count(),8);
+    await page.locator('#song-play').click();
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING SONG'),{
+      timeout:15000});
+    assert.equal(await page.locator('#song-play').textContent(),'■ STOP SONG');
+    assert.match(await page.locator('#song-now').textContent(),/PLAYING 1 \/ 8/);
+    await page.locator('#song-play').click();
+    assert.equal(await page.locator('#song-play').textContent(),'▶ PLAY SONG');
+    await page.locator('#song-timeline button[data-song-section="1"]').click();
+    assert.equal(await page.locator('#song-timeline button[data-song-section="1"]').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·');
+    await page.locator('#song-apply').click();
+    assert.equal(await page.locator('#length').inputValue(),'64');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'A3',
+      'Applying VERSE injects common harmonic root on bass, all four native parts');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#length').inputValue(),'16');
+    assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
+      'A single Undo removes applied whole section and restores native LEN');
+    await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-song.png',fullPage:true});
     assert.equal(await page.locator('#bpm').inputValue(),'90');
     await page.locator('#bpm').fill('140');await page.locator('#bpm').press('Tab');
     assert.equal(await page.locator('#bpm').inputValue(),'140');
