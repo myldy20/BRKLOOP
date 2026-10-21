@@ -435,54 +435,95 @@ try{
       'One click from Pattern opens Sound for the selected track');
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
-    assert.equal(await page.locator('#scope-canvas').isVisible(),true);
-    assert.match(await page.locator('#scope-state').textContent(),/PLAY OR AUDITION|LIVE \/ DSP AUDIO/,
-      'Scope is idle until the first preview; prior song audition may already have started the DSP');
+    // Sound graphs now ARE controls. No Edit hop and no decorative dead charts.
+    assert.equal(await page.locator('#scope-canvas').isVisible(),false,
+      'Real oscilloscope is optional instead of permanently occupying the first viewport');
+    assert.equal(await page.locator('#sound-more').getAttribute('open'),null,
+      'Rare native pages are collapsed by default');
     assert.equal(await page.locator('.sound-viz').count(),3);
+    assert.equal(await page.locator('[data-sound-jump]').count(),0,
+      'Every graph is editable here without secondary navigation');
     assert.equal(await page.locator('#viz-env-handles circle').count(),4);
-    assert.match(await page.locator('#viz-env-line').getAttribute('d'),/^M /);
-    assert.match(await page.locator('#viz-lfo-line').getAttribute('d'),/^M /);
-    assert.match(await page.locator('#viz-filter-line').getAttribute('d'),/^M /);
-    assert.equal(await page.locator('#sound-macros .dial-control').count()>0,true,
-      'Native engine macros now use rotary instrument controls');
+    for(const id of ['viz-env-line','viz-lfo-line','viz-filter-line'])
+      assert.match(await page.locator('#'+id).getAttribute('d'),/^M /);
+    assert.equal(await page.locator('#viz-lfo-wave option').count(),5,
+      'Wave selection must match original SLOOP enum SIN/TRI/SAW/SQR/S&H');
+    assert.equal(await page.locator('#viz-lfo-sync option').count(),11);
+    assert.equal(await page.locator('#sound-macros .sound-control').count(),8,
+      'Native engine macros remain in main sound surface');
     assert.equal(await page.locator('#engine-select option').count(),12);
     assert.equal(await page.locator('#preset-select option').count()>=3,true);
-    assert.equal(await page.locator('#sound-macros .sound-control').count(),8,'Eight original synth controls in TONE');
     assert.equal(await page.locator('#sound-shape .sound-control[data-param="28"] input').inputValue(),'-24',
-      'Native WOBBLE transpose must be exposed in TONE');
-    await page.locator('[data-sound-jump="lfo"]').click();
-    assert.equal(await page.locator('#sound-pages button[data-sound-page="lfo"]').getAttribute('aria-pressed'),'true',
-      'Clicking the waveform moves to editable native LFO controls');
-    const initialWave=await page.locator('#viz-lfo-line').getAttribute('d');
-    const nativeRate=page.locator('#sound-lfo .sound-control[data-param="9"] input');
-    await page.evaluate(()=>{
-      const el=document.querySelector('#sound-lfo .sound-control[data-param="9"] input');
-      el.value=String(Number(el.value)===Number(el.max)?Number(el.min):Number(el.max));
-      el.dispatchEvent(new Event('input',{bubbles:true}));
-    });
-    assert.notEqual(await page.locator('#viz-lfo-line').getAttribute('d'),initialWave,
-      'LFO visual must update during drag, before native change/commit');
-    await nativeRate.dispatchEvent('change');
+      'Original WOBBLE transpose is untouched');
+
+    // Native ADSR values edit the waveform immediately and Undo restores both.
+    const oldAttack=await page.locator('#viz-env-attack').inputValue();
+    const envStart=await page.locator('#viz-env-line').getAttribute('d');
+    await page.locator('#viz-env-attack').fill(oldAttack==='90'?'35':'90');
+    assert.notEqual(await page.locator('#viz-env-line').getAttribute('d'),envStart);
+    await page.locator('#viz-env-attack').dispatchEvent('change');
     await page.locator('#undo').click();
-    assert.equal(await page.locator('#viz-lfo-line').getAttribute('d'),initialWave,
-      'LFO shape and native rate restore together with Undo');
+    assert.equal(await page.locator('#viz-env-attack').inputValue(),oldAttack);
+    assert.equal(await page.locator('#viz-env-line').getAttribute('d'),envStart);
 
-    assert.equal(await page.locator('#sound-lfo .sound-control').count(),11,'Complete native LFO controls');
-    assert.equal(await page.locator('#sound-lfo .sound-control[data-param="14"] input').inputValue(),'40',
-      'Native WOBBLE LFO-to-filter depth retained');
-    assert.equal(await page.locator('#sound-macros').isVisible(),false,'Inactive pages not a long scroll');
-    await page.locator('[data-sound-jump="filter"]').click();
-    assert.equal(await page.locator('#sound-pages button[data-sound-page="tone"]').getAttribute('aria-pressed'),'true');
-    assert.equal(await page.locator('#tone-extras').getAttribute('open'),'',
-      'Filter graph gives direct access to otherwise folded native filter controls');
-    await page.locator('[data-sound-jump="lfo"]').click();
+    // The actual Wave enum edits SLOOP parameter #10 in place (no Edit).
+    const oldWave=await page.locator('#viz-lfo-wave').inputValue();
+    const oldLfoPath=await page.locator('#viz-lfo-line').getAttribute('d');
+    await page.locator('#viz-lfo-wave').selectOption(oldWave==='4'?'0':'4');
+    assert.notEqual(await page.locator('#viz-lfo-line').getAttribute('d'),oldLfoPath);
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#viz-lfo-wave').inputValue(),oldWave);
 
+    // A single two-dimensional gesture simultaneously edits real native
+    // RATE and FILTER DEPTH and is one atomic Undo.
+    const rateBefore=await page.locator('#viz-lfo-rate').inputValue();
+    const depthBefore=await page.locator('#viz-lfo-depth').inputValue();
+    const lfoBox=await page.locator('#viz-lfo').boundingBox();
+    assert(lfoBox,'Editable LFO plot must have a hit area');
+    await page.mouse.move(lfoBox.x+lfoBox.width*.30,lfoBox.y+lfoBox.height*.60);
+    await page.mouse.down();
+    await page.mouse.move(lfoBox.x+lfoBox.width*.87,lfoBox.y+lfoBox.height*.18,{steps:6});
+    await page.mouse.up();
+    assert.notEqual(await page.locator('#viz-lfo-rate').inputValue(),rateBefore);
+    assert.notEqual(await page.locator('#viz-lfo-depth').inputValue(),depthBefore);
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#viz-lfo-rate').inputValue(),rateBefore);
+    assert.equal(await page.locator('#viz-lfo-depth').inputValue(),depthBefore,
+      'One Undo restores both axes of LFO gesture');
+
+    const tiltBefore=await page.locator('#viz-filter-tilt').inputValue();
+    const offsetBefore=await page.locator('#viz-filter-offset').inputValue();
+    const filterBox=await page.locator('#viz-filter').boundingBox();
+    await page.mouse.move(filterBox.x+filterBox.width*.25,filterBox.y+filterBox.height*.70);
+    await page.mouse.down();
+    await page.mouse.move(filterBox.x+filterBox.width*.91,filterBox.y+filterBox.height*.14,{steps:6});
+    await page.mouse.up();
+    assert.notEqual(await page.locator('#viz-filter-tilt').inputValue(),tiltBefore);
+    assert.notEqual(await page.locator('#viz-filter-offset').inputValue(),offsetBefore);
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#viz-filter-tilt').inputValue(),tiltBefore);
+    assert.equal(await page.locator('#viz-filter-offset').inputValue(),offsetBefore);
+
+    // Native rate is bypassed when beat-sync controls LFO speed.
+    await page.locator('#viz-lfo-sync').selectOption('3');
+    assert.equal(await page.locator('#viz-lfo-rate').isDisabled(),true);
+    await page.locator('#viz-lfo-sync').selectOption('0');
+    assert.equal(await page.locator('#viz-lfo-rate').isEnabled(),true);
+    await page.locator('#sound-scope summary').click();
+    assert.equal(await page.locator('#scope-canvas').isVisible(),true);
     // Instrument audition works without any notes placed in the pattern and
     // feeds the real waveform scope via SLOOP's audio-thread meter.
     await page.locator('#sound-audition').click();
     assert.match(await page.locator('#status').textContent(),/AUDITION · [A-G]/);
     await page.waitForFunction(()=>document.getElementById('scope-state').textContent.startsWith('LIVE / DSP AUDIO'),
       {timeout:15000});
+    await page.locator('#sound-more summary').click();
+    assert.equal(await page.locator('#sound-pages').isVisible(),true);
+    await page.locator('#sound-pages button[data-sound-page="lfo"]').click();
+    assert.equal(await page.locator('#sound-lfo .sound-control').count(),11);
+    assert.equal(await page.locator('#sound-lfo .sound-control[data-param="14"] input').inputValue(),'40',
+      'Native WOBBLE filter modulation baseline remains intact');
+
     // Instrument only the real AudioWorklet boundary: a slider input without
     // mouseup/change MUST emit a live param command before the gesture ends.
     await page.evaluate(async()=>{
@@ -545,6 +586,8 @@ try{
     assert.equal(await page.locator('#global-count').textContent(),'49');
     await page.waitForFunction(()=>document.querySelectorAll('#sound-global-controls .sound-control').length>10,
       {timeout:10000});
+    await page.locator('#sound-more summary').click();
+    await page.locator('#sound-scope summary').click();
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-sound.png',fullPage:true});
 
     // Synth controls must not bleed into the drum kit editor.
