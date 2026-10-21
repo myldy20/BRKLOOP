@@ -1142,6 +1142,24 @@ for(const button of document.querySelectorAll('[data-sound-jump]')){
     $('sound-pages').scrollIntoView({block:'nearest'});
   });
 }
+$('sound-audition').addEventListener('click',async()=>{
+  const {v,track}=current();
+  try{
+    await ensureAudio();
+    if(v.track===3){
+      player.hit(track.p[bank.pe0],0,112);
+      status('AUDITION · NATIVE KIT / KICK');
+    }else{
+      // The original FM-1 panel applies its transpose to a played key.
+      // Start from middle C5 so factory patches such as WOBBLE (-24) sound
+      // in an audible bass register while preserving their pitch settings.
+      const pitch=panelAuditionPitch(72,track.p);
+      player.note(v.track,pitch,true);
+      setTimeout(()=>player?.note(v.track,pitch,false),650);
+      status('AUDITION · '+noteName(pitch)+' / '+bank.engines[track.engine].name);
+    }
+  }catch(e){status(e.message);}
+});
 $('quick-sound-open').addEventListener('click',()=>selectWorkspace('sound'));
 $('quick-sound-preset').addEventListener('change',e=>{
   const {v,track}=current(),index=Number(e.target.value);
