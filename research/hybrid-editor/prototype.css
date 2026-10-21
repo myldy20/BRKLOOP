@@ -388,3 +388,47 @@ header h1{color:#fbfbff;letter-spacing:-.06em;}
 }
 @media(max-width:350px){.scene-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
   .scene-led{height:10px;}}
+
+/* SONG: song-form editing stays above single-scene ideas. Every card represents
+   four bars on a native 64-step SLOOP grid; the arranger does not use web timers. */
+.song-panel{margin:0 0 14px;padding:15px 16px;border:1px solid #526070;border-radius:12px;
+  background:linear-gradient(145deg,#1b2132 0%,#10141f 55%,#101015);
+  box-shadow:inset 0 1px 0 #ffffff12,0 7px 24px #0004;}
+.song-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.song-head strong{display:block;font-size:23px;letter-spacing:-.04em;margin:4px 0;}
+.song-head p{font-size:11px;line-height:1.5;color:#b5c0cf;margin:3px 0 0;}
+.song-chip{border:1px solid #477b95;background:#173044;color:#aee4f4;
+  font:bold 10px/1.4 ui-monospace,Menlo,monospace;white-space:nowrap;
+  padding:5px 7px;border-radius:5px;}
+.song-controls{display:grid;grid-template-columns:1.2fr .5fr .7fr 1.2fr 1.2fr;gap:7px;margin:13px 0 10px;}
+.song-controls label{display:grid;gap:5px;min-width:0;font:bold 10px/1.25 ui-monospace,Menlo,monospace;color:#b5c3d2;}
+.song-controls select{width:100%;min-width:0;height:40px;padding:6px;color:#e4edff;font-size:12px;
+  border:1px solid #4b5d6b;background:#0c1220;}
+.song-actions{margin:11px 0 8px;}
+#song-generate,#song-next{border-color:#468ca7;}
+#song-play:not(:disabled){background:#205a45;border-color:#38b37a;color:#e8fff1;}
+#song-apply:not(:disabled){background:#224e7e;border-color:#4088c8;}
+.song-now{font:11px/1.5 ui-monospace,Menlo,monospace;color:#c6d5e8;
+  margin:9px 0;border-bottom:1px solid #2b384c;padding-bottom:8px;}
+.song-timeline{display:flex;gap:7px;overflow-x:auto;scroll-snap-type:x mandatory;
+  padding:4px 2px 10px;}
+.song-section{min-width:150px;max-width:205px;flex:1 0 150px;display:flex;flex-direction:column;
+  text-align:left;gap:3px;padding:10px 9px;background:#161d29;color:#d0deee;
+  border:1px solid #334b63;border-radius:8px;scroll-snap-align:start;cursor:pointer;}
+.song-section-num{font:10px/1.3 ui-monospace,Menlo,monospace;opacity:.7;}
+.song-section-title{font-size:14px;letter-spacing:.02em;}
+.song-section-sub{font-size:10px;color:#9fb4c8;}
+.song-section-bars{margin-top:auto;font:9px/1.6 ui-monospace,Menlo,monospace;color:#94aabf;}
+.song-section.selected{background:#1b3754;border-color:#72acdb;
+  box-shadow:inset 0 2px 0 #72acdb;}
+.song-section.playing{outline:2px solid #35d98d;outline-offset:0;
+  box-shadow:0 0 14px -4px #24b47f;}
+.song-footnote{font-size:10px;color:#9cacc0;line-height:1.6;margin:3px 0 0;}
+@media(max-width:780px){.song-controls{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .song-panel{padding:11px;}.song-head strong{font-size:20px;}
+  .song-section{min-width:139px;flex-basis:139px;}
+}
+@media(max-width:420px){.song-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .song-chip{font-size:9px;padding:4px;max-width:85px;white-space:normal;text-align:center;}
+  .song-section{min-width:128px;flex-basis:128px;}
+}
