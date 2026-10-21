@@ -67,8 +67,8 @@ export class FirmwareAudio {
   // The next beat-1 now belongs to the next section, without waiting for a
   // message to cross the browser's UI/audio thread boundary.
   setArrangement(states){
-    if(!Array.isArray(states)||states.length<2||states.length>16)
-      throw new RangeError('Song playback needs 2..16 sections');
+    if(!Array.isArray(states)||states.length<1||states.length>64)
+      throw new RangeError('Song playback needs 1..64 section cycles');
     const div=states[0]?.tracks?.[3]?.p?.[30];
     if(!Number.isInteger(div)||div<0||div>8)
       throw new RangeError('Invalid arrangement division');
