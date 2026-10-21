@@ -306,6 +306,30 @@
       <div class="viz-caption" id="viz-filter-caption">LP ← 0 = open → HP · schematic tone curve.</div>
     </div>
   </section>
+  <section class="fx-direct" id="fx-direct" aria-label="Direct track effects">
+    <div class="fx-direct-title"><div><strong>FX / SENDS</strong><span>REAL-TIME TRACK EFFECTS</span></div>
+      <span class="fx-direct-note">DRAG TO MIX</span></div>
+    <div class="fx-direct-content">
+      <div class="fx-pad-area">
+        <div class="fx-pad-labels"><span>REVERB ↑</span><span>DELAY →</span></div>
+        <div id="fx-pad" class="fx-pad" tabindex="0" role="group"
+          aria-label="FX XY pad, horizontal delay, vertical reverb. Arrow keys edit effects."
+          aria-describedby="fx-pad-hint">
+          <span class="fx-axis fx-axis-x" aria-hidden="true"></span>
+          <span class="fx-axis fx-axis-y" aria-hidden="true"></span>
+          <span id="fx-cursor" class="fx-cursor" aria-hidden="true"></span>
+        </div>
+        <p class="fx-pad-hint" id="fx-pad-hint">X = DELAY · Y = REVERB · ARROW KEYS ALSO WORK</p>
+      </div>
+      <div class="fx-direct-side">
+        <div class="fx-direct-values">
+          <label>DELAY <input id="fx-delay" data-fx-param="35" type="number" min="0" max="127" step="1" aria-label="Track delay send"></label>
+          <label>REVERB <input id="fx-reverb" data-fx-param="36" type="number" min="0" max="127" step="1" aria-label="Track reverb send"></label>
+        </div>
+        <div class="fx-direct-knobs" id="fx-direct-knobs" aria-label="Direct distortion and chorus effects"></div>
+      </div>
+    </div>
+  </section>
   <section class="sound-page" data-page="tone">
     <div class="sound-section"><div class="section-title">INSTRUMENT CONTROLS <span class="section-info">LIVE · ORIGINAL SLOOP DSP</span></div><div class="sound-controls sound-dials" id="sound-macros"></div></div>
     <details class="sound-extras" id="tone-extras"><summary>FILTER · PITCH · OTHER CONTROLS</summary>

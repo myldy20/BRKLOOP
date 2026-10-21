@@ -456,6 +456,53 @@ try{
     assert.equal(await page.locator('#sound-shape .sound-control[data-param="28"] input').inputValue(),'-24',
       'Original WOBBLE transpose is untouched');
 
+    // Immediate FX mixing: 2D Delay / Reverb uses SLOOP params 35/36,
+    // with one Undo for the entire two-axis pointer gesture.
+    assert.equal(await page.locator('#fx-direct').isVisible(),true);
+    assert.equal(await page.locator('#fx-direct-knobs .dial-control').count(),2);
+    assert.equal(await page.locator('#fx-direct-knobs [data-param="33"]').count(),1,
+      'Original per-track distortion available without navigating to FX pages');
+    assert.equal(await page.locator('#fx-direct-knobs [data-param="34"]').count(),1,
+      'Original per-track chorus available in the same compact workbench');
+    const delayBefore=Number(await page.locator('#fx-delay').inputValue());
+    const reverbBefore=Number(await page.locator('#fx-reverb').inputValue());
+    await page.locator('#fx-pad').scrollIntoViewIfNeeded();
+    let xy=await page.locator('#fx-pad').boundingBox();
+    const dx=delayBefore>64?.12:.88,ry=reverbBefore>64?.87:.13;
+    await page.mouse.move(xy.x+xy.width*.50,xy.y+xy.height*.50);
+    await page.mouse.down();
+    await page.mouse.move(xy.x+xy.width*dx,xy.y+xy.height*ry,{steps:7});
+    await page.mouse.up();
+    const delayAfter=Number(await page.locator('#fx-delay').inputValue());
+    const reverbAfter=Number(await page.locator('#fx-reverb').inputValue());
+    assert.notEqual(delayAfter,delayBefore,'XY X controls actual SLOOP delay send');
+    assert.notEqual(reverbAfter,reverbBefore,'XY Y controls actual SLOOP reverb send');
+    await page.locator('#undo').click();
+    assert.equal(Number(await page.locator('#fx-delay').inputValue()),delayBefore);
+    assert.equal(Number(await page.locator('#fx-reverb').inputValue()),reverbBefore,
+      'Both native FX sends restored by one Undo');
+    await page.locator('#redo').click();
+    assert.equal(Number(await page.locator('#fx-delay').inputValue()),delayAfter);
+    assert.equal(Number(await page.locator('#fx-reverb').inputValue()),reverbAfter);
+    // XY pad is also keyboard accessible without dragging.
+    await page.locator('#fx-pad').focus();
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(Number(await page.locator('#fx-delay').inputValue()),delayAfter-1);
+    await page.locator('#undo').click();
+    assert.equal(Number(await page.locator('#fx-delay').inputValue()),delayAfter);
+    // Distortion/chorus dials remain native and undoable.
+    const drive=page.locator('#fx-direct-knobs [data-param="33"] input');
+    const beforeDrive=Number(await drive.inputValue());
+    await page.evaluate(()=>{
+      const el=document.querySelector('#fx-direct-knobs [data-param="33"] input');
+      el.value=String(Number(el.value)>63?12:107);
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    assert.notEqual(Number(await page.locator('#fx-direct-knobs [data-param="33"] input').inputValue()),beforeDrive);
+    await page.locator('#undo').click();
+    assert.equal(Number(await page.locator('#fx-direct-knobs [data-param="33"] input').inputValue()),beforeDrive);
+
     // Native ADSR values edit the waveform immediately and Undo restores both.
     const oldAttack=await page.locator('#viz-env-attack').inputValue();
     const envStart=await page.locator('#viz-env-line').getAttribute('d');
@@ -599,6 +646,8 @@ try{
     assert.equal(await page.locator('#sound-pages button[data-sound-page="lfo"]').isVisible(),false);
     assert.equal(await page.locator('#sound-pages button[data-sound-page="envelope"]').isVisible(),false);
     assert.equal(await page.locator('#kit-select').isVisible(),true);
+    assert.equal(await page.locator('#fx-direct').isVisible(),true,
+      'Drum track has direct FX sends even though synth-only ADSR and LFO graphs are hidden');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-kit.png',fullPage:true});
     await page.locator('#tracks button').first().click();
     await page.locator('#engine-select').selectOption('1');

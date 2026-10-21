@@ -413,6 +413,7 @@ function writeNativeTrackParam(id,value,final){
     session.preview({type:'setTrackParam',track:v.track,param:id,value});
     player?.trackParam(v.track,id,value);
     updateSoundVisuals();
+    updateFxDirect();
   }
 }
 const level=(id,value=current().track.p[id])=>{
@@ -671,6 +672,87 @@ function rotaryControl(container,descriptor,value,command,displayName,paramId){
   body.addEventListener('pointercancel',finish);
   body.append(face,pointer,input);label.append(body,output);container.append(label);paint();
 }
+// Delay and reverb are separate native track sends (P_DLY=35, P_REV=36).
+// A pointer gesture on their shared XY pad is a single Undo transaction.
+function updateFxDirect(){
+  if(!$('fx-pad')||$('sound-panel').hidden)return;
+  const t=current().track;
+  const delay=clamp(t.p[35],0,127),reverb=clamp(t.p[36],0,127);
+  const dot=$('fx-cursor');
+  dot.style.left=(100*delay/127)+'%';
+  dot.style.top=(100*(1-reverb/127))+'%';
+  for(const [id,value]of [['fx-delay',delay],['fx-reverb',reverb]]){
+    const input=$(id);
+    if(document.activeElement!==input&&input.value!==String(value))
+      input.value=String(value);
+  }
+  const pad=$('fx-pad');
+  pad.style.setProperty('--fx-x',(100*delay/127)+'%');
+  pad.style.setProperty('--fx-y',(100*(1-reverb/127))+'%');
+  pad.title='DELAY '+delay+' · REVERB '+reverb+' (original SLOOP sends)';
+}
+function renderFxDirect(){
+  const target=$('fx-direct-knobs');target.replaceChildren();
+  for(const [id,label]of [[33,'DISTORTION'],[34,'CHORUS']]){
+    rotaryControl(target,bank.trackControls[id],current().track.p[id],
+      (value,final)=>writeNativeTrackParam(id,value,final),label,id);
+  }
+  updateFxDirect();
+}
+function attachFxDirect(){
+  for(const input of document.querySelectorAll('[data-fx-param]')){
+    const id=Number(input.dataset.fxParam);
+    input.addEventListener('input',()=>{
+      const value=Number(input.value);
+      if(input.value!==''&&Number.isInteger(value)&&value>=0&&value<=127&&
+         current().track.p[id]!==value)
+        writeNativeTrackParam(id,value,false);
+    });
+    input.addEventListener('change',()=>{
+      const value=Number(input.value);
+      if(input.value===''||!Number.isInteger(value)||value<0||value>127){
+        updateFxDirect();return;
+      }
+      writeNativeTrackParam(id,value,true);
+    });
+  }
+  const pad=$('fx-pad');let drag=null;
+  const move=e=>{
+    if(!drag||drag.pointer!==e.pointerId)return;
+    const rect=pad.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    const delay=clamp(Math.round(127*(e.clientX-rect.left)/rect.width),0,127);
+    const reverb=clamp(Math.round(127*(1-(e.clientY-rect.top)/rect.height)),0,127);
+    if(current().track.p[35]!==delay)writeNativeTrackParam(35,delay,false);
+    if(current().track.p[36]!==reverb)writeNativeTrackParam(36,reverb,false);
+  };
+  pad.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
+    e.preventDefault();pad.focus();
+    drag={pointer:e.pointerId};pad.setPointerCapture(e.pointerId);
+    move(e);
+  });
+  pad.addEventListener('pointermove',move);
+  const end=e=>{
+    if(!drag||drag.pointer!==e.pointerId)return;
+    if(e.type==='pointerup')move(e);
+    drag=null;
+    writeNativeTrackParam(35,current().track.p[35],true);
+  };
+  pad.addEventListener('pointerup',end);
+  pad.addEventListener('pointercancel',end);
+  pad.addEventListener('keydown',e=>{
+    const keys={ArrowRight:[35,1],ArrowLeft:[35,-1],
+      ArrowUp:[36,1],ArrowDown:[36,-1]};
+    if(!Object.hasOwn(keys,e.key))return;
+    e.preventDefault();
+    const [id,dir]=keys[e.key],value=clamp(current().track.p[id]+dir*(e.shiftKey?8:1),0,127);
+    if(value!==current().track.p[id]){
+      writeNativeTrackParam(id,value,false);
+      writeNativeTrackParam(id,value,true);
+    }
+  });
+}
 function renderQuickSound(){
   const {v,track}=current(),drums=v.track===3;
   const currentPreset=drums?(bank.kits[track.p[bank.pe0]]||'KIT'):
@@ -786,6 +868,7 @@ function renderSound(){
   }
   $('sound-visuals').hidden=drums;
   if(!drums)updateSoundVisuals();
+  renderFxDirect();
   $('param-count').textContent=String(common.length);
   $('global-count').textContent=String(bank.globalControls.length);
 }
@@ -1250,6 +1333,7 @@ const initial=session.getView();session.select(initial.track,0);render();
 drawScope();
 attachEnvelopeEditor();
 attachDirectSoundEditors();
+attachFxDirect();
 $('sound-more').addEventListener('toggle',()=>{
   if(!$('sound-more').open&&soundPage!=='tone'){
     soundPage='tone';renderSound();
