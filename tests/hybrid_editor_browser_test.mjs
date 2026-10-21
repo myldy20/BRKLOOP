@@ -521,7 +521,7 @@ try{
     assert.match(await page.locator('#status').textContent(),/AUDITION · [A-G]/);
     await page.waitForFunction(()=>document.getElementById('scope-state').textContent.startsWith('LIVE / DSP AUDIO'),
       {timeout:15000});
-    await page.locator('#sound-more summary').click();
+    await page.locator('#sound-more > summary').click();
     assert.equal(await page.locator('#sound-pages').isVisible(),true);
     await page.locator('#sound-pages button[data-sound-page="lfo"]').click();
     assert.equal(await page.locator('#sound-lfo .sound-control').count(),11);
@@ -590,7 +590,7 @@ try{
     assert.equal(await page.locator('#global-count').textContent(),'49');
     await page.waitForFunction(()=>document.querySelectorAll('#sound-global-controls .sound-control').length>10,
       {timeout:10000});
-    await page.locator('#sound-more summary').click();
+    await page.locator('#sound-more > summary').click();
     await page.locator('#sound-scope summary').click();
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-sound.png',fullPage:true});
 
