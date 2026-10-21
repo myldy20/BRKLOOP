@@ -13,10 +13,16 @@ export class FirmwareAudio {
     this.audio = new Float32Array(this.w.memory.buffer, this.w.preview_render(), this.frames * 2);
     this.previous = null;
     this.position = this.frames;
+    this.arrangement = null;
   }
   write(data) { this.bytes.set(data, this.transfer); }
   transport() {
-    return { positions: [0, 1, 2, 3].map((k) => this.w.preview_position(k)) };
+    const info={ positions: [0, 1, 2, 3].map((k) => this.w.preview_position(k)) };
+    if(this.arrangement){
+      info.sectionIndex=this.arrangement.index;
+      info.sectionCount=this.arrangement.states.length;
+    }
+    return info;
   }
   sync(state) {
     const old = this.previous;
@@ -55,6 +61,30 @@ export class FirmwareAudio {
     state.kits?.forEach((kit, k) => { this.write(kit); this.w.preview_kit(k); });
     this.previous = state;
   }
+  // All scenes have the same 64-step grid and division. Load the NEXT native
+  // score as soon as the LAST step of this score has fired; SLOOP still plays
+  // the current last step while the next score is prepared in audio memory.
+  // The next beat-1 now belongs to the next section, without waiting for a
+  // message to cross the browser's UI/audio thread boundary.
+  setArrangement(states){
+    if(!Array.isArray(states)||states.length<2||states.length>16)
+      throw new RangeError('Song playback needs 2..16 sections');
+    const div=states[0]?.tracks?.[3]?.p?.[30];
+    if(!Number.isInteger(div)||div<0||div>8)
+      throw new RangeError('Invalid arrangement division');
+    for(const state of states){
+      if(!Array.isArray(state?.tracks)||state.tracks.length!==4)
+        throw new Error('Arrangement requires four native tracks');
+      for(const [k,t] of state.tracks.entries())
+        if(t.p?.[29]!==64||t.p?.[30]!==div||
+           (k===3?t.dstep?.length!==64:t.step?.length!==64))
+          throw new Error('Song sections require synchronized LEN 64 and DIV');
+    }
+    this.arrangement=null;
+    this.sync(states[0]);
+    this.arrangement={states,index:0,next:0,armed:false};
+  }
+  clearArrangement(){this.arrangement=null;}
   // Low-latency control path: apply immediately on audio thread, without
   // serializing 64 steps x 4 tracks or waiting for another pattern cycle.
   setTrackParam(track,id,value) {
@@ -70,7 +100,18 @@ export class FirmwareAudio {
   }
   render(left, right) {
     for (let i = 0; i < left.length; i++) {
-      if (this.position >= this.frames) { this.w.preview_render(); this.position = 0; }
+      if (this.position >= this.frames) {
+        const arr=this.arrangement;
+        if(arr&&!arr.armed&&this.w.preview_position(3)===63){
+          arr.next=(arr.index+1)%arr.states.length;
+          this.sync(arr.states[arr.next]);arr.armed=true;
+        }
+        this.w.preview_render();
+        if(arr&&arr.armed&&this.w.preview_position(3)===0){
+          arr.index=arr.next;arr.armed=false;
+        }
+        this.position = 0;
+      }
       left[i] = this.audio[this.position * 2]; right[i] = this.audio[this.position * 2 + 1];
       this.position++;
     }
@@ -88,7 +129,9 @@ if (typeof registerProcessor === 'function') {
       this.lastTransport = '';
       this.port.onmessage = ({ data }) => {
         try {
-          if (data.type === 'state') this.dsp.sync(data.state);
+          if (data.type === 'state') {this.dsp.clearArrangement();this.dsp.sync(data.state);}
+          else if (data.type === 'arrange') this.dsp.setArrangement(data.states);
+          else if (data.type === 'arrange-clear') this.dsp.clearArrangement();
           else if (data.type === 'track-param') this.dsp.setTrackParam(data.track,data.id,data.value);
           else if (data.type === 'global-param') this.dsp.setGlobalParam(data.id,data.value);
           else if (data.type === 'note') this.dsp.w.preview_note(data.track, data.note, data.on ? 1 : 0);
@@ -103,7 +146,8 @@ if (typeof registerProcessor === 'function') {
       for (const channel of outputs[0])
         for (let i = 0; i < channel.length; i++) this.peak = Math.max(this.peak, Math.abs(channel[i]));
       this.meterFrames += outputs[0][0].length;
-      const message = {}, transport = this.dsp.transport(), signature = transport.positions.join(',');
+      const message = {}, transport = this.dsp.transport(),
+        signature = transport.positions.join(',')+':'+(transport.sectionIndex??'-');
       if (signature !== this.lastTransport) {
         this.lastTransport = signature;
         message.transport = transport;

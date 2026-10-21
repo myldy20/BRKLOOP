@@ -59,6 +59,10 @@ export class LocalPreview {
   }
   trackParam(track,id,value) { this.node?.port.postMessage({type:'track-param',track,id,value}); }
   globalParam(id,value) { this.node?.port.postMessage({type:'global-param',id,value}); }
+  // All sequence switching happens on the audio thread at the last native
+  // step. The UI never schedules song sections with setTimeout.
+  arrange(states) { this.node?.port.postMessage({type:'arrange',states}); }
+  clearArrangement() { this.node?.port.postMessage({type:'arrange-clear'}); }
   play(on) { this.node?.port.postMessage({ type: 'play', on }); }
   note(track, note, on) { this.node?.port.postMessage({ type: 'note', track, note, on }); }
   hit(kit, lane, velocity) { this.node?.port.postMessage({ type: 'hit', kit, lane, velocity }); }
