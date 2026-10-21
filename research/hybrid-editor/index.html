@@ -45,15 +45,33 @@
   </div>
   <div class="groove-actions song-actions">
     <button id="song-generate" type="button">GENERATE SONG</button>
-    <button id="song-next" type="button">NEXT VERSION</button>
+    <button id="song-next" type="button" disabled>EVOLVE UNLOCKED</button>
     <button id="song-play" type="button" disabled>▶ PLAY SONG</button>
     <button id="song-apply" type="button" disabled>APPLY SECTION</button>
     <button id="song-export" type="button" disabled>EXPORT JSON</button>
     <button id="song-cancel" type="button" disabled>CANCEL</button>
   </div>
+  <div class="song-editbar" id="song-editbar" aria-label="Selected song section controls">
+    <label>SELECTED DURATION<select id="song-repeats" aria-label="Selected section duration" disabled>
+      <option value="1">4 BARS</option>
+      <option value="2">8 BARS</option>
+      <option value="3">12 BARS</option>
+      <option value="4">16 BARS</option>
+    </select></label>
+    <div class="song-edit-actions">
+      <button id="song-left" type="button" aria-label="Move section left" disabled>← MOVE</button>
+      <button id="song-right" type="button" aria-label="Move section right" disabled>MOVE →</button>
+      <button id="song-duplicate" type="button" disabled>DUPLICATE</button>
+      <button id="song-delete" type="button" disabled>DELETE</button>
+      <button id="song-lock" type="button" disabled>LOCK</button>
+      <button id="song-regen" type="button" disabled>REMAKE SELECTED</button>
+      <button id="song-edit-undo" type="button" disabled>↶ SONG UNDO</button>
+      <button id="song-edit-redo" type="button" disabled>↷ SONG REDO</button>
+    </div>
+  </div>
   <div class="song-now" id="song-now" role="status" aria-live="polite">Generate a song. Your current four-track pattern is preserved until Apply Section.</div>
   <div class="song-timeline" id="song-timeline" aria-label="Song section timeline"></div>
-  <p class="song-footnote">Each section is a native 64-step, four-track scene. Play Song loops through the form; use Stop to finish. Apply Section copies only the selected section into the editor in one Undo. Export JSON stores the full arrangement.</p>
+  <p class="song-footnote">Move, duplicate or delete sections; duration repeats each native 4-bar scene for 4–16 bars. Lock a keeper, then Evolve Unlocked to regenerate only the others. Song Undo/Redo manages arrangement edits separately from the pattern editor's Undo. Play Song loops through the complete form. Apply Section copies the selected native scene to the editor; Export JSON preserves the full edited arrangement.</p>
 </section>
 <section class="scene-panel" id="scene-panel" aria-label="Compose four linked tracks">
   <div class="scene-heading">

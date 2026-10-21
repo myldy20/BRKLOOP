@@ -432,3 +432,26 @@ header h1{color:#fbfbff;letter-spacing:-.06em;}
   .song-chip{font-size:9px;padding:4px;max-width:85px;white-space:normal;text-align:center;}
   .song-section{min-width:128px;flex-basis:128px;}
 }
+
+/* Arrange editing: compact timeline modifiers with responsive wrapping and
+   clear per-section lock/duration state. Independent Song Undo controls. */
+.song-editbar{display:grid;grid-template-columns:124px minmax(0,1fr);gap:10px;
+  align-items:end;padding:10px 0;border-top:1px solid #2a394d;}
+.song-editbar label{display:grid;gap:5px;min-width:0;
+  color:#b7c6d7;font:bold 10px/1.35 ui-monospace,Menlo,monospace;}
+.song-editbar select{width:100%;min-width:0;height:36px;padding:6px 5px;
+  border-radius:6px;background:#101c2a;color:#e4f3ff;border:1px solid #426081;}
+.song-edit-actions{display:flex;flex-wrap:wrap;gap:5px;min-width:0;}
+.song-edit-actions button{font-size:10px;min-height:36px;padding:7px 9px;white-space:nowrap;}
+#song-lock[aria-pressed="true"]{border-color:#d5aa55;color:#ffdb7c;
+  background:#4b371e;}
+#song-regen:not(:disabled),#song-duplicate:not(:disabled){border-color:#3d729a;}
+#song-edit-undo:not(:disabled),#song-edit-redo:not(:disabled){border-color:#55718e;}
+.song-section[aria-pressed="true"]{border-color:#72acdb;}
+.song-section.locked{border-color:#a78344;background:#26201b;}
+.song-section.locked .song-section-title:after{content:"  ▣";color:#f4cd6d;}
+.song-section .song-section-bars{white-space:normal;}
+@media(max-width:800px){.song-editbar{grid-template-columns:1fr;gap:8px;}}
+@media(max-width:520px){.song-edit-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+  .song-edit-actions button{min-width:0;white-space:normal;font-size:10px;padding:6px 3px;}
+}
