@@ -543,3 +543,27 @@ footer{color:#7f8c9d;}
   .tool-context{max-width:130px;font-size:9px;}
   .song-workspace .song-panel{padding:9px;}
 }
+
+/* Song edit actions: a short primary row; destructive and history commands in
+   an explicit disclosure. No modal and no extra navigation level. */
+.song-editbar{grid-template-columns:148px minmax(0,1fr);border-top:0;border-bottom:1px solid #2e3646;}
+.song-edit-actions{display:flex;align-items:stretch;flex-wrap:wrap;gap:5px;}
+.song-edit-actions>button{min-width:94px;padding:7px 8px;}
+.song-more{position:relative;align-self:stretch;min-width:130px;}
+.song-more>summary{display:flex;align-items:center;justify-content:center;padding:9px 10px;min-height:36px;
+  border:1px solid #414c60;background:#1a2330;border-radius:6px;color:#c8d6e8;
+  cursor:pointer;font:bold 10px/1.4 ui-monospace,Menlo,monospace;list-style:none;}
+.song-more>summary::-webkit-details-marker{display:none;}
+.song-more>summary:after{content:' ▾';color:#93b3d6;}
+.song-more[open]>summary{border-color:#7493b4;background:#24354a;}
+.song-more[open]>summary:after{content:' ▴';}
+.song-more-actions{display:flex;flex-wrap:wrap;gap:6px;padding:9px 0 1px;}
+.song-more-actions button{min-height:37px;padding:7px 10px;font-size:10px;}
+@media(max-width:800px){.song-editbar{grid-template-columns:1fr;}}
+@media(max-width:520px){
+ .song-edit-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+ .song-edit-actions>button{min-width:0;white-space:normal;}
+ .song-more{grid-column:1/-1;}
+ .song-more-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
+ .song-more-actions button{min-width:0;padding:7px 4px;white-space:normal;}
+}
