@@ -6,6 +6,7 @@ import {panelAuditionPitch} from './panel-pitch.mjs';
 import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
 import {generateMelodicIdea,melodicIdeaSummary} from '../melodic-ideas.mjs';
 import {mutateExistingPattern} from '../pattern-mutate.mjs';
+import {generateLinkedScene} from '../linked-scene.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -42,7 +43,7 @@ for(let k=0;k<seed.tracks.length;k++){
   }
 }
 const session=createResearchEditSession(seed);
-let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1;
+let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1,sceneDraft=null,sceneSeed=1;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -63,6 +64,14 @@ function soundState(){
     t[prop]=mutationDraft.steps.map(s=>structuredClone(s));
     t.micro=[...mutationDraft.micro];
   }
+  if(sceneDraft){
+    for(const item of sceneDraft.tracks){
+      const t=state.tracks[item.track];
+      t[item.track===3?'dstep':'step']=item.steps.map(s=>structuredClone(s));
+      t.p[29]=sceneDraft.length;t.p[30]=sceneDraft.division;
+      t.micro.fill(0);t.fill.fill(0);t.locks=[];
+    }
+  }
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
@@ -70,7 +79,7 @@ function status(message){$('status').textContent=message;}
 function commit(cmd){
   try{
     const edited=session.dispatch(cmd);
-    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
+    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;player?.sync();}
     render();
     return edited;
   }catch(e){status(e.message);render();return false;}
@@ -498,7 +507,7 @@ function previewGroove(next){
   const {v,state}=current();
   if(v.track!==3)return;
   if(next)grooveSeed=(grooveSeed+1)>>>0;
-  mutationDraft=null;melodyDraft=null;
+  mutationDraft=null;melodyDraft=null;sceneDraft=null;
   grooveDraft=generateDrumGroove({length:state.tracks[3].p[29],
     style:$('groove-style').value,seed:grooveSeed});
   player?.sync();render();
@@ -550,7 +559,7 @@ function previewMelody(next){
     rhythm:$('melody-rhythm').value,scale:$('melody-scale').value,
     progression:$('melody-progression').value,root:Number($('melody-root').value),
     seed:melodySeed});
-  melodyDraft={...idea,track:v.track};grooveDraft=null;mutationDraft=null;
+  melodyDraft={...idea,track:v.track};grooveDraft=null;mutationDraft=null;sceneDraft=null;
   player?.sync();render();
   status('PREVIEW '+idea.role+' / '+idea.scale+' / #'+idea.seed+' · Apply to save');
 }
@@ -601,10 +610,58 @@ function previewMutation(next){
   if(next)mutationSeed=(mutationSeed+1)>>>0;
   const draft=mutateExistingPattern({track,trackIndex:v.track,length:track.p[29],
     mode:$('mutation-mode').value,amount:Number($('mutation-amount').value),seed:mutationSeed});
-  mutationDraft=draft;grooveDraft=null;melodyDraft=null;
+  mutationDraft=draft;grooveDraft=null;melodyDraft=null;sceneDraft=null;
   player?.sync();render();
   status(draft.changed?'PREVIEW '+draft.mode+' / #'+draft.seed+' · original unchanged':
     'NO CHANGE · add source notes/hits or select another mutation focus');
+}
+function renderScene(){
+  const state=session.getState(),draft=sceneDraft;
+  $('scene-apply').disabled=!draft;
+  $('scene-cancel').disabled=!draft;
+  $('scene-meta').textContent=draft?
+    'DRAFT #'+draft.seed+' · '+draft.length+' steps / synchronized DIV '+draft.division+
+    ' · '+draft.attacks.bass+' bass + '+draft.attacks.arp+' arp attacks · unchanged until Apply':
+    'Apply replaces all four scores, matches LEN/DIV and clears old step locks/fills; presets + BPM survive.';
+  const rows=$('scene-visual');rows.replaceChildren();
+  const length=draft?.length||Number($('scene-length').value);
+  for(let base=0;base<length;base+=16){
+    const group=newEl('div','scene-bar');
+    group.append(newEl('div','scene-bar-head','BAR '+(base/16+1)));
+    for(const [k,label] of [[3,'DRUMS'],[0,'BASS'],[1,'CHORDS'],[2,'ARP']]){
+      const source=draft?.tracks[k].steps||(k===3?state.tracks[k].dstep:state.tracks[k].step);
+      const row=newEl('div','scene-bar-row');row.dataset.track=String(k);
+      row.append(newEl('span','scene-row-name',label));
+      for(let i=base;i<base+16;i++){
+        const s=source[i],active=k===3?s.on!==0:s.time===0&&s.n>0;
+        const dot=newEl('span','scene-led'+(active?' on':'')+(i%4===0?' beat':''));
+        dot.dataset.step=String(i);dot.dataset.track=String(k);
+        dot.setAttribute('aria-label',label+' step '+(i+1)+(active?' active':' empty'));
+        row.append(dot);
+      }
+      group.append(row);
+    }
+    rows.append(group);
+  }
+}
+function cancelScene(){
+  if(sceneDraft){sceneDraft=null;player?.sync();}
+  render();status('SCENE PREVIEW CANCELLED · all four original tracks retained');
+}
+function previewScene(next){
+  if(next)sceneSeed=(sceneSeed+1)>>>0;
+  try{
+    const state=session.getState();
+    const draft=generateLinkedScene({
+      length:Number($('scene-length').value),division:state.tracks[3].p[30],
+      root:Number($('scene-root').value),scale:$('scene-scale').value,
+      progression:$('scene-progression').value,groove:$('scene-groove').value,
+      feel:$('scene-feel').value,seed:sceneSeed
+    });
+    sceneDraft=draft;grooveDraft=null;melodyDraft=null;mutationDraft=null;
+    player?.sync();render();
+    status('LINKED SCENE #'+sceneSeed+' · bass follows kick, arp follows hats · Apply to save');
+  }catch(e){status('Scene error: '+e.message);}
 }
 function selectWorkspace(tab){
   if(tab!=='pattern'&&tab!=='sound')return;
@@ -634,6 +691,7 @@ function render(){
     renderGroove();
     renderMelody();
     renderMutation();
+    renderScene();
   }
   $('bpm').value=String(current().state.g[0]);
   $('swing').value=String(current().state.g[1]);
@@ -660,6 +718,20 @@ for(const [id,param] of [['bpm',0],['swing',1]]){
     commit({type:'setGlobalParam',track:current().v.track,param,value});
   });
 }
+$('scene-preview').addEventListener('click',()=>previewScene(false));
+$('scene-next').addEventListener('click',()=>previewScene(true));
+$('scene-apply').addEventListener('click',()=>{
+  if(!sceneDraft)return;
+  const draft=sceneDraft,v=session.getView();
+  if(commit({type:'applyLinkedScene',track:0,length:draft.length,division:draft.division,tracks:draft.tracks})){
+    session.select(v.track,Math.min(v.step,draft.length-1));
+    render();
+    status('SCENE APPLIED / '+draft.length+' STEPS / #'+draft.seed+' · one Undo for four tracks');
+  }
+});
+$('scene-cancel').addEventListener('click',cancelScene);
+for(const id of ['scene-root','scene-scale','scene-progression','scene-groove','scene-feel','scene-length'])
+  $(id).addEventListener('change',cancelScene);
 $('groove-preview').addEventListener('click',()=>previewGroove(false));
 $('groove-next').addEventListener('click',()=>previewGroove(true));
 $('groove-apply').addEventListener('click',()=>{
@@ -736,8 +808,8 @@ $('length').addEventListener('change',e=>{
 });
 $('division').addEventListener('change',e=>commit({type:'setDivision',track:current().v.track,division:Number(e.target.value)}));
 $('auto').addEventListener('change',e=>{auto=e.target.checked;render();});
-$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;session.undo();render();player?.sync();});
-$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;session.redo();render();player?.sync();});
+$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;session.undo();render();player?.sync();});
+$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;session.redo();render();player?.sync();});
 $('clear').addEventListener('click',eraseSelected);
 $('rest').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:2});});
 $('tie').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:1});});

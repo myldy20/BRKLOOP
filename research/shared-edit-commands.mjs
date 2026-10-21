@@ -37,6 +37,28 @@ function synthStepWithNotes(step,notes) {
 }
 function apply(data,cmd){
   const {type,track:trackId,step:i}=cmd;
+  // One song-level transaction across all four tracks. Build on a separate
+  // snapshot and publish only when all 64-step native payloads validate.
+  if(type==='applyLinkedScene'){
+    const len=integer(cmd.length,16,64,'linked LEN');
+    if(len%16!==0)throw new RangeError('Scene must contain complete bars');
+    const div=integer(cmd.division,0,8,'linked DIV');
+    if(!Array.isArray(cmd.tracks)||cmd.tracks.length!==4)
+      throw new Error('Linked scene requires exactly four ordered tracks');
+    const proposed=copy(data);
+    for(let k=0;k<4;k++){
+      if(cmd.tracks[k]?.track!==k)throw new Error('Linked track order mismatch');
+      const target=trackAt(proposed,k);
+      target.p[29]=len;target.p[30]=div;
+      apply(proposed,{type:k===3?'replaceDrumGroove':'replaceMelodicIdea',
+        track:k,length:len,steps:cmd.tracks[k].steps});
+    }
+    // Commit the entire validated replacement; keep global tempo, native
+    // engine, preset, mixer and FX controls. Old score locks, fills and micro
+    // are cleared by the per-track replacement because steps were replaced.
+    data.tracks=proposed.tracks;
+    return;
+  }
   const t=trackAt(data,trackId);
   if(type==='applyPatternMutation'){
     if(!Array.isArray(cmd.steps)||cmd.steps.length!==64||
