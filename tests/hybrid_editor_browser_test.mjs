@@ -435,6 +435,51 @@ try{
       'One click from Pattern opens Sound for the selected track');
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    // Search across all 153 native engine sounds. Selection previews in
+    // AudioWorklet without replacing the current track until Use.
+    assert.equal(await page.locator('#sound-browser').isVisible(),false);
+    assert.equal(await page.locator('#sound-browse-open').isVisible(),true);
+    await page.locator('#sound-browse-open').click();
+    assert.equal(await page.locator('#sound-browse-open').getAttribute('aria-expanded'),'true');
+    assert.equal(await page.locator('#sound-browser').isVisible(),true);
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count(),153);
+    assert.equal(await page.locator('#engine-select').isDisabled(),true);
+    assert.equal(await page.locator('#sound-visuals').isVisible(),false,
+      'Browser temporarily focuses the screen on audition and decision');
+    await page.locator('#sound-browser-query').fill('wobble');
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count()>=1,true);
+    await page.locator('#sound-browser-results .browser-star').first().click();
+    assert.equal(await page.locator('#sound-browser-results .browser-star').first().getAttribute('aria-pressed'),'true');
+    assert.match(await page.evaluate(()=>localStorage.getItem('brkloop.preview.favorite-factory-sounds.v1')),/s:0:/);
+    await page.locator('#sound-browser-saved').click();
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count()>=1,true);
+    await page.locator('#sound-browser-saved').click();
+    await page.locator('#sound-browser-results .browser-pick').first().click();
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('AUDITION '),
+      {timeout:15000});
+    assert.equal(await page.locator('#engine-select').inputValue(),'0',
+      'Preview never changes the editable track engine');
+    assert.equal(await page.locator('#sound-browser-use').isEnabled(),true);
+    await page.locator('#sound-browser-cancel').click();
+    assert.equal(await page.locator('#sound-browser-use').isDisabled(),true);
+    assert.equal(await page.locator('#engine-select').inputValue(),'0');
+    await page.locator('#sound-browser-query').fill('');
+    await page.locator('#sound-browser-engine').selectOption('1');
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count()>1,true);
+    await page.locator('#sound-browser-results .browser-pick').first().click();
+    assert.equal(await page.locator('#engine-select').inputValue(),'0');
+    await page.locator('#sound-browser-next').click();
+    await page.locator('#sound-browser-use').click();
+    assert.equal(await page.locator('#sound-browser').isVisible(),false);
+    assert.equal(await page.locator('#engine-select').inputValue(),'1',
+      'Use commits a factory sound from a different engine in one Undo');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#engine-select').inputValue(),'0');
+    await page.locator('#redo').click();
+    assert.equal(await page.locator('#engine-select').inputValue(),'1');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#preset-select option').count()>=3,true,
+      'Original factory sound and WOBBLE are available again after Undo');
     // Sound graphs now ARE controls. No Edit hop and no decorative dead charts.
     assert.equal(await page.locator('#scope-canvas').isVisible(),false,
       'Real oscilloscope is optional instead of permanently occupying the first viewport');
@@ -646,6 +691,17 @@ try{
     assert.equal(await page.locator('#sound-pages button[data-sound-page="lfo"]').isVisible(),false);
     assert.equal(await page.locator('#sound-pages button[data-sound-page="envelope"]').isVisible(),false);
     assert.equal(await page.locator('#kit-select').isVisible(),true);
+    await page.locator('#sound-browse-open').click();
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count(),37,
+      'Drum browsing is restricted to original SLOOP kits');
+    assert.equal(await page.locator('#sound-browser-engine-wrap').isVisible(),false);
+    await page.locator('#sound-browser-results .browser-pick').first().click();
+    assert.equal(await page.locator('#sound-browser-use').isEnabled(),true);
+    await page.locator('#tracks button').first().click();
+    assert.equal(await page.locator('#sound-browser-use').isDisabled(),true,
+      'Changing tracks cancels a stale drum-kit preview');
+    await page.locator('#sound-browse-open').click();
+    await page.locator('#tracks button').last().click();
     assert.equal(await page.locator('#fx-direct').isVisible(),true,
       'Drum track has direct FX sends even though synth-only ADSR and LFO graphs are hidden');
     await page.screenshot({path:'ui-shots/research-hybrid-'+d.name+'-kit.png',fullPage:true});
