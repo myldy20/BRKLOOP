@@ -56,6 +56,7 @@ jobs:
           node --check research/linked-scene.mjs
           node --check research/song-arranger.mjs
           node tests/song_arranger_test.mjs
+          node tests/song_arranger_edit_test.mjs
           node tests/worklet_arrangement_test.mjs
           node tests/linked_scene_test.mjs
           node tests/pattern_mutation_test.mjs
