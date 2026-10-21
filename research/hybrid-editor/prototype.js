@@ -48,7 +48,8 @@ let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=nu
 let songDraft=null,songSession=null,songSeed=1,songIndex=0,songActive=-1,songCycle=-1,songPlaying=false;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
-let workspaceTab='pattern',activeTool=null,keyboardVisible=true,rollScroll={left:0,top:0};
+const compactScreen=window.matchMedia('(max-width:900px)').matches;
+let workspaceTab='pattern',activeTool=null,keyboardVisible=!compactScreen,rollScroll={left:0,top:0};
 let soundPage='tone';
 function soundState(){
   const state=session.getState();
@@ -881,7 +882,9 @@ function selectWorkspace(tab){
     grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
   }
   workspaceTab=tab;
-  keyboardVisible=tab==='sound'||(tab==='pattern'&&current().v.mode==='step');
+  // Keep the MIDI keyboard opt-in on touch screens; its sticky piano was
+  // occupying a large portion of the pattern and sound editor viewport.
+  keyboardVisible=!compactScreen && (tab==='sound'||(tab==='pattern'&&current().v.mode==='step'));
   player?.sync();
   render();
 }
