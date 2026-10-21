@@ -7,7 +7,7 @@ import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
 import {generateMelodicIdea,melodicIdeaSummary} from '../melodic-ideas.mjs';
 import {mutateExistingPattern} from '../pattern-mutate.mjs';
 import {generateLinkedScene} from '../linked-scene.mjs';
-import {generateSongArrangement,applyArrangementSection} from '../song-arranger.mjs';
+import {generateSongArrangement,applyArrangementSection,createSongArrangementSession,arrangementPlaybackStates} from '../song-arranger.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -45,7 +45,7 @@ for(let k=0;k<seed.tracks.length;k++){
 }
 const session=createResearchEditSession(seed);
 let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1,sceneDraft=null,sceneSeed=1;
-let songDraft=null,songSeed=1,songIndex=0,songActive=-1,songPlaying=false;
+let songDraft=null,songSession=null,songSeed=1,songIndex=0,songActive=-1,songPlaying=false;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -83,7 +83,7 @@ function commit(cmd){
   try{
     if(songPlaying)stopSongPlayback();
     const edited=session.dispatch(cmd);
-    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;player?.sync();}
+    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;songSession=null;player?.sync();}
     render();
     return edited;
   }catch(e){status(e.message);render();return false;}
@@ -681,7 +681,13 @@ function stopSongPlayback(){
 function onSongTransport(transport){
   if(!songPlaying||!songDraft||!Number.isInteger(transport.sectionIndex))return;
   if(transport.sectionIndex===songActive)return;
-  songActive=transport.sectionIndex;
+  let cycle=transport.sectionIndex,selected=0;
+  for(const section of songDraft.sections){
+    const loops=section.repeats??1;
+    if(cycle<loops)break;
+    cycle-=loops;selected++;
+  }
+  songActive=Math.min(selected,songDraft.sections.length-1);
   updateSongTransportLabel();
 }
 function updateSongTransportLabel(){
@@ -700,7 +706,7 @@ function renderSong(){
   $('song-apply').disabled=!songDraft;
   $('song-export').disabled=!songDraft;
   $('song-cancel').disabled=!songDraft;
-  $('song-next').disabled=false;
+  $('song-next').disabled=!songDraft;
   $('song-play').textContent=songPlaying?'■ STOP SONG':'▶ PLAY SONG';
   $('song-chip').textContent=songDraft?
     songDraft.totalBars+' BARS · '+songDraft.sections.length+' SECTIONS':'MULTI-SCENE';
@@ -713,7 +719,7 @@ function renderSong(){
       btn.append(newEl('small','song-section-num',String(i+1).padStart(2,'0')),
         newEl('strong','song-section-title',section.title),
         newEl('span','song-section-sub',section.subtitle),
-        newEl('span','song-section-bars','4 BARS · '+section.scene.attacks.drums+' drum steps'));
+        newEl('span','song-section-bars',((section.repeats??1)*4)+' BARS · '+section.scene.attacks.drums+' drum steps'+(section.locked?' · LOCKED':'')));
       btn.addEventListener('click',()=>{
         if(songPlaying)stopSongPlayback();
         songIndex=i;player?.sync();renderSong();
@@ -722,11 +728,27 @@ function renderSong(){
       timeline.append(btn);
     });
   }
+  const controls=['song-repeats','song-left','song-right','song-duplicate',
+    'song-delete','song-lock','song-regen','song-edit-undo','song-edit-redo'];
+  for(const id of controls)$(id).disabled=!songDraft;
+  if(songDraft){
+    const sec=songDraft.sections[songIndex];
+    $('song-repeats').value=String(sec.repeats??1);
+    $('song-left').disabled=songIndex===0;
+    $('song-right').disabled=songIndex===songDraft.sections.length-1;
+    $('song-duplicate').disabled=songDraft.sections.length>=16;
+    $('song-delete').disabled=songDraft.sections.length<=1;
+    $('song-regen').disabled=Boolean(sec.locked);
+    $('song-lock').textContent=sec.locked?'UNLOCK':'LOCK';
+    $('song-lock').setAttribute('aria-pressed',String(Boolean(sec.locked)));
+    $('song-edit-undo').disabled=!songSession?.history().undo;
+    $('song-edit-redo').disabled=!songSession?.history().redo;
+  }
   updateSongTransportLabel();
 }
 function cancelSong(){
   if(songPlaying)stopSongPlayback();
-  if(songDraft){songDraft=null;songIndex=0;player?.sync();}
+  if(songDraft){songDraft=null;songSession=null;songIndex=0;player?.sync();}
   render();status('ARRANGEMENT PREVIEW CANCELLED · original editor retained');
 }
 function previewSong(next){
@@ -738,6 +760,7 @@ function previewSong(next){
       root:Number($('song-root').value),scale:$('song-scale').value,
       progression:$('song-progression').value,groove:$('song-groove').value,
       division:state.tracks[3].p[30],seed:songSeed});
+    songSession=createSongArrangementSession(songDraft);
     songIndex=0;songActive=-1;
     grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
     player?.sync();render();
@@ -749,8 +772,7 @@ async function playSong(){
   if(!songDraft)return;
   try{
     await ensureAudio();
-    const source=session.getState(),states=songDraft.sections.map(section=>
-      applyArrangementSection(source,section));
+    const source=session.getState(),states=arrangementPlaybackStates(songDraft,source);
     player.arrange(states);player.play(true);
     songPlaying=true;songActive=0;playing=true;
     renderSong();status('PLAYING SONG · SLOOP audio-thread transitions');
@@ -771,6 +793,49 @@ function applySongSection(){
         ' TO EDITOR · original presets retained · one Undo');
     }
   }catch(e){status('Apply failed: '+e.message);}
+}
+function editSong(command){
+  if(!songSession||!songDraft)return;
+  try{
+    if(songPlaying)stopSongPlayback();
+    const beforeId=songDraft.sections[songIndex].id;
+    if(!songSession.dispatch({...command,index:songIndex}))return;
+    songDraft=songSession.get();
+    if(command.type==='move')songIndex=Math.max(0,Math.min(songDraft.sections.length-1,
+      songIndex+command.direction));
+    else if(command.type==='duplicate')songIndex++;
+    else if(command.type==='remove')
+      songIndex=Math.min(songIndex,songDraft.sections.length-1);
+    else songIndex=Math.max(0,songDraft.sections.findIndex(s=>s.id===beforeId));
+    songActive=-1;
+    player?.sync();renderSong();
+    status('SONG EDIT '+command.type.toUpperCase()+' · '+songDraft.totalBars+' bars · undo available');
+  }catch(e){status('Song edit: '+e.message);}
+}
+function evolveUnlockedSong(){
+  if(!songSession||!songDraft)return;
+  try{
+    if(songPlaying)stopSongPlayback();
+    const index=songIndex,id=songDraft.sections[index].id;
+    if(songSession.dispatch({type:'evolve'})){
+      songDraft=songSession.get();songSeed=songDraft.seed;
+      songIndex=Math.max(0,songDraft.sections.findIndex(s=>s.id===id));
+      player?.sync();renderSong();
+      status('EVOLVED UNLOCKED SECTIONS · locked musical ideas preserved · Song Undo available');
+    }else status('ALL SECTIONS LOCKED · unlock one to evolve');
+  }catch(e){status('Song evolve: '+e.message);}
+}
+function songHistory(direction){
+  if(!songSession)return;
+  if(songPlaying)stopSongPlayback();
+  const id=songDraft.sections[songIndex]?.id;
+  if(songSession[direction]()){
+    songDraft=songSession.get();
+    const found=songDraft.sections.findIndex(s=>s.id===id);
+    songIndex=found>=0?found:Math.min(songIndex,songDraft.sections.length-1);
+    player?.sync();renderSong();
+    status('SONG '+direction.toUpperCase()+' · arrangement updated');
+  }
 }
 function exportSong(){
   if(!songDraft)return;
@@ -838,8 +903,17 @@ for(const [id,param] of [['bpm',0],['swing',1]]){
     commit({type:'setGlobalParam',track:current().v.track,param,value});
   });
 }
+$('song-left').addEventListener('click',()=>editSong({type:'move',direction:-1}));
+$('song-right').addEventListener('click',()=>editSong({type:'move',direction:1}));
+$('song-duplicate').addEventListener('click',()=>editSong({type:'duplicate'}));
+$('song-delete').addEventListener('click',()=>editSong({type:'remove'}));
+$('song-lock').addEventListener('click',()=>editSong({type:'lock'}));
+$('song-regen').addEventListener('click',()=>editSong({type:'regenerate'}));
+$('song-repeats').addEventListener('change',()=>editSong({type:'repeats',value:Number($('song-repeats').value)}));
+$('song-edit-undo').addEventListener('click',()=>songHistory('undo'));
+$('song-edit-redo').addEventListener('click',()=>songHistory('redo'));
 $('song-generate').addEventListener('click',()=>previewSong(false));
-$('song-next').addEventListener('click',()=>previewSong(true));
+$('song-next').addEventListener('click',evolveUnlockedSong);
 $('song-cancel').addEventListener('click',cancelSong);
 $('song-apply').addEventListener('click',applySongSection);
 $('song-play').addEventListener('click',()=>void playSong());
