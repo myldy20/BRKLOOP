@@ -275,7 +275,9 @@ function renderTracks(){
     b.append(newEl('span','',k===3?(bank.kits[session.getState().tracks[3].p[bank.pe0]]||'16 lanes'):(bank.engines[session.getState().tracks[k].engine]?.presets[session.getState().tracks[k].preset]?.name||'CUSTOM')));
     b.addEventListener('click',()=>{
       if(k!==v.track&&(grooveDraft||melodyDraft||mutationDraft)){grooveDraft=null;melodyDraft=null;mutationDraft=null;player?.sync();}
+      if(k!==v.track&&soundCandidate){soundCandidate=null;player?.panic();}
       session.select(k,Math.min(v.step,clamp(session.getState().tracks[k].p[29],1,64)-1));
+      if(k!==v.track&&soundBrowserOpen)player?.sync();
       session.setMode(modeForTrack[k]);chord=false;chordNotes=[];render();
     });
     container.append(b);
