@@ -485,7 +485,7 @@ try{
     assert(lfoBox,'Editable LFO plot must have a hit area');
     await page.mouse.move(lfoBox.x+lfoBox.width*.30,lfoBox.y+lfoBox.height*.60);
     await page.mouse.down();
-    await page.mouse.move(lfoBox.x+lfoBox.width*.87,lfoBox.y+lfoBox.height*.18,{steps:6});
+    await page.mouse.move(lfoBox.x+lfoBox.width*.87,lfoBox.y+lfoBox.height*.88,{steps:6});
     await page.mouse.up();
     assert.notEqual(await page.locator('#viz-lfo-rate').inputValue(),rateBefore);
     assert.notEqual(await page.locator('#viz-lfo-depth').inputValue(),depthBefore);
