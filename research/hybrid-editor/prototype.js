@@ -7,6 +7,7 @@ import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
 import {generateMelodicIdea,melodicIdeaSummary} from '../melodic-ideas.mjs';
 import {mutateExistingPattern} from '../pattern-mutate.mjs';
 import {generateLinkedScene} from '../linked-scene.mjs';
+import {generateSongArrangement,applyArrangementSection} from '../song-arranger.mjs';
 const $=id=>document.getElementById(id);
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteName=n=>names[n%12]+(Math.floor(n/12)-1);
@@ -44,6 +45,7 @@ for(let k=0;k<seed.tracks.length;k++){
 }
 const session=createResearchEditSession(seed);
 let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1,sceneDraft=null,sceneSeed=1;
+let songDraft=null,songSeed=1,songIndex=0,songActive=-1,songPlaying=false;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -72,14 +74,16 @@ function soundState(){
       t.micro.fill(0);t.fill.fill(0);t.locks=[];
     }
   }
+  if(songDraft)return applyArrangementSection(state,songDraft.sections[songIndex]);
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
 function status(message){$('status').textContent=message;}
 function commit(cmd){
   try{
+    if(songPlaying)stopSongPlayback();
     const edited=session.dispatch(cmd);
-    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;player?.sync();}
+    if(edited){grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;player?.sync();}
     render();
     return edited;
   }catch(e){status(e.message);render();return false;}
@@ -96,7 +100,7 @@ function selectStep(step){
 }
 
 async function ensureAudio(){
-  if(!player)player=new LocalPreview(soundState,e=>status(e.message));
+  if(!player)player=new LocalPreview(soundState,e=>status(e.message),()=>{},transport=>onSongTransport(transport));
   await player.start();
 }
 async function audition(note,trackId=current().v.track){
@@ -507,7 +511,8 @@ function previewGroove(next){
   const {v,state}=current();
   if(v.track!==3)return;
   if(next)grooveSeed=(grooveSeed+1)>>>0;
-  mutationDraft=null;melodyDraft=null;sceneDraft=null;
+  if(songPlaying)stopSongPlayback();
+  mutationDraft=null;melodyDraft=null;sceneDraft=null;songDraft=null;
   grooveDraft=generateDrumGroove({length:state.tracks[3].p[29],
     style:$('groove-style').value,seed:grooveSeed});
   player?.sync();render();
@@ -559,7 +564,8 @@ function previewMelody(next){
     rhythm:$('melody-rhythm').value,scale:$('melody-scale').value,
     progression:$('melody-progression').value,root:Number($('melody-root').value),
     seed:melodySeed});
-  melodyDraft={...idea,track:v.track};grooveDraft=null;mutationDraft=null;sceneDraft=null;
+  if(songPlaying)stopSongPlayback();
+  melodyDraft={...idea,track:v.track};grooveDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;
   player?.sync();render();
   status('PREVIEW '+idea.role+' / '+idea.scale+' / #'+idea.seed+' · Apply to save');
 }
@@ -610,7 +616,8 @@ function previewMutation(next){
   if(next)mutationSeed=(mutationSeed+1)>>>0;
   const draft=mutateExistingPattern({track,trackIndex:v.track,length:track.p[29],
     mode:$('mutation-mode').value,amount:Number($('mutation-amount').value),seed:mutationSeed});
-  mutationDraft=draft;grooveDraft=null;melodyDraft=null;sceneDraft=null;
+  if(songPlaying)stopSongPlayback();
+  mutationDraft=draft;grooveDraft=null;melodyDraft=null;sceneDraft=null;songDraft=null;
   player?.sync();render();
   status(draft.changed?'PREVIEW '+draft.mode+' / #'+draft.seed+' · original unchanged':
     'NO CHANGE · add source notes/hits or select another mutation focus');
@@ -658,10 +665,122 @@ function previewScene(next){
       progression:$('scene-progression').value,groove:$('scene-groove').value,
       feel:$('scene-feel').value,seed:sceneSeed
     });
-    sceneDraft=draft;grooveDraft=null;melodyDraft=null;mutationDraft=null;
+    if(songPlaying)stopSongPlayback();
+    sceneDraft=draft;grooveDraft=null;melodyDraft=null;mutationDraft=null;songDraft=null;
     player?.sync();render();
     status('LINKED SCENE #'+sceneSeed+' · bass follows kick, arp follows hats · Apply to save');
   }catch(e){status('Scene error: '+e.message);}
+}
+function stopSongPlayback(){
+  if(!songPlaying)return;
+  songPlaying=false;songActive=-1;playing=false;
+  player?.play(false);player?.panic();player?.clearArrangement();
+  player?.sync();
+  renderSong();
+}
+function onSongTransport(transport){
+  if(!songPlaying||!songDraft||!Number.isInteger(transport.sectionIndex))return;
+  if(transport.sectionIndex===songActive)return;
+  songActive=transport.sectionIndex;
+  updateSongTransportLabel();
+}
+function updateSongTransportLabel(){
+  const el=$('song-now');if(!el)return;
+  el.textContent=songPlaying&&songDraft?
+    'PLAYING '+(songActive+1)+' / '+songDraft.sections.length+
+    ' · '+songDraft.sections[songActive]?.title+' · Live SLOOP / sections loop':
+    songDraft?'SELECTED '+songDraft.sections[songIndex]?.title+
+      ' · Press ▶ Play to loop this section, or PLAY SONG for the whole form':
+    'Generate a song. Your current four-track pattern is preserved until Apply Section.';
+  for(const btn of $('song-timeline').querySelectorAll('button[data-song-section]'))
+    btn.classList.toggle('playing',songPlaying&&Number(btn.dataset.songSection)===songActive);
+}
+function renderSong(){
+  $('song-play').disabled=!songDraft;
+  $('song-apply').disabled=!songDraft;
+  $('song-export').disabled=!songDraft;
+  $('song-cancel').disabled=!songDraft;
+  $('song-next').disabled=false;
+  $('song-play').textContent=songPlaying?'■ STOP SONG':'▶ PLAY SONG';
+  $('song-chip').textContent=songDraft?
+    songDraft.totalBars+' BARS · '+songDraft.sections.length+' SECTIONS':'MULTI-SCENE';
+  const timeline=$('song-timeline');timeline.replaceChildren();
+  if(songDraft){
+    songDraft.sections.forEach((section,i)=>{
+      const btn=newEl('button','song-section'+(i===songIndex?' selected':''));
+      btn.dataset.songSection=String(i);
+      btn.setAttribute('aria-pressed',String(i===songIndex));
+      btn.append(newEl('small','song-section-num',String(i+1).padStart(2,'0')),
+        newEl('strong','song-section-title',section.title),
+        newEl('span','song-section-sub',section.subtitle),
+        newEl('span','song-section-bars','4 BARS · '+section.scene.attacks.drums+' drum steps'));
+      btn.addEventListener('click',()=>{
+        if(songPlaying)stopSongPlayback();
+        songIndex=i;player?.sync();renderSong();
+        status('SONG SECTION '+section.title+' / audition through original SLOOP engine');
+      });
+      timeline.append(btn);
+    });
+  }
+  updateSongTransportLabel();
+}
+function cancelSong(){
+  if(songPlaying)stopSongPlayback();
+  if(songDraft){songDraft=null;songIndex=0;player?.sync();}
+  render();status('ARRANGEMENT PREVIEW CANCELLED · original editor retained');
+}
+function previewSong(next){
+  if(next)songSeed=(songSeed+1)>>>0;
+  try{
+    if(songPlaying)stopSongPlayback();
+    const state=session.getState();
+    songDraft=generateSongArrangement({form:$('song-form').value,
+      root:Number($('song-root').value),scale:$('song-scale').value,
+      progression:$('song-progression').value,groove:$('song-groove').value,
+      division:state.tracks[3].p[30],seed:songSeed});
+    songIndex=0;songActive=-1;
+    grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
+    player?.sync();render();
+    status('SONG #'+songSeed+' · '+songDraft.sections.length+' sections · source untouched');
+  }catch(e){status('Song arrangement error: '+e.message);}
+}
+async function playSong(){
+  if(songPlaying){stopSongPlayback();status('SONG STOPPED · original notes retained');return;}
+  if(!songDraft)return;
+  try{
+    await ensureAudio();
+    const source=session.getState(),states=songDraft.sections.map(section=>
+      applyArrangementSection(source,section));
+    player.arrange(states);player.play(true);
+    songPlaying=true;songActive=0;playing=true;
+    renderSong();status('PLAYING SONG · SLOOP audio-thread transitions');
+  }catch(e){status('Song playback error: '+e.message);}
+}
+function applySongSection(){
+  if(!songDraft)return;
+  if(songPlaying)stopSongPlayback();
+  const chosen=songDraft.sections[songIndex].scene;
+  try{
+    const edited=session.dispatch({type:'applyLinkedScene',track:0,length:64,
+      division:chosen.division,tracks:chosen.tracks});
+    if(edited){
+      const v=session.getView();
+      if(v.step>=64)session.select(v.track,63);
+      player?.sync();render();
+      status('APPLIED '+songDraft.sections[songIndex].title+
+        ' TO EDITOR · original presets retained · one Undo');
+    }
+  }catch(e){status('Apply failed: '+e.message);}
+}
+function exportSong(){
+  if(!songDraft)return;
+  const data=JSON.stringify(songDraft,null,2);
+  const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  const a=document.createElement('a');
+  a.href=url;a.download='brkloop-song-'+songDraft.form.toLowerCase()+'-'+songDraft.seed+'.json';
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  status('EXPORTED '+songDraft.sections.length+' linked sections · BRKLOOP_ARRANGEMENT_V1');
 }
 function selectWorkspace(tab){
   if(tab!=='pattern'&&tab!=='sound')return;
@@ -692,6 +811,7 @@ function render(){
     renderMelody();
     renderMutation();
     renderScene();
+    renderSong();
   }
   $('bpm').value=String(current().state.g[0]);
   $('swing').value=String(current().state.g[1]);
@@ -718,6 +838,14 @@ for(const [id,param] of [['bpm',0],['swing',1]]){
     commit({type:'setGlobalParam',track:current().v.track,param,value});
   });
 }
+$('song-generate').addEventListener('click',()=>previewSong(false));
+$('song-next').addEventListener('click',()=>previewSong(true));
+$('song-cancel').addEventListener('click',cancelSong);
+$('song-apply').addEventListener('click',applySongSection);
+$('song-play').addEventListener('click',()=>void playSong());
+$('song-export').addEventListener('click',exportSong);
+for(const id of ['song-form','song-root','song-scale','song-progression','song-groove'])
+  $(id).addEventListener('change',cancelSong);
 $('scene-preview').addEventListener('click',()=>previewScene(false));
 $('scene-next').addEventListener('click',()=>previewScene(true));
 $('scene-apply').addEventListener('click',()=>{
@@ -808,8 +936,8 @@ $('length').addEventListener('change',e=>{
 });
 $('division').addEventListener('change',e=>commit({type:'setDivision',track:current().v.track,division:Number(e.target.value)}));
 $('auto').addEventListener('change',e=>{auto=e.target.checked;render();});
-$('undo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;session.undo();render();player?.sync();});
-$('redo').addEventListener('click',()=>{grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;session.redo();render();player?.sync();});
+$('undo').addEventListener('click',()=>{if(songPlaying)stopSongPlayback();grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;session.undo();render();player?.sync();});
+$('redo').addEventListener('click',()=>{if(songPlaying)stopSongPlayback();grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;songDraft=null;session.redo();render();player?.sync();});
 $('clear').addEventListener('click',eraseSelected);
 $('rest').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:2});});
 $('tie').addEventListener('click',()=>{const {v}=current();if(v.track!==3)commit({type:'setGate',track:v.track,step:v.step,gate:1});});
@@ -829,7 +957,8 @@ $('chord-done').addEventListener('click',()=>{
 $('chord-cancel').addEventListener('click',()=>{chord=false;chordNotes=[];render();});
 $('play').addEventListener('click',async()=>{
   try{
+    if(songPlaying)stopSongPlayback();
     await ensureAudio();player.play(true);playing=true;status('PLAYING / SLOOP WASM');
   }catch(e){status(e.message);}
 });
-$('stop').addEventListener('click',()=>{player?.play(false);player?.panic();playing=false;status('STOPPED');});
+$('stop').addEventListener('click',()=>{if(songPlaying)stopSongPlayback();player?.play(false);player?.panic();playing=false;status('STOPPED');});
