@@ -699,3 +699,14 @@ footer{color:#7f8c9d;}
  .scope-head strong{font-size:13px;}
  .scope-footer{font-size:8px;}
 }
+
+.sound-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+#sound-audition{background:#205a43;border:1px solid #3caa79;color:#e5fff3;
+  font-size:11px;font-weight:900;letter-spacing:.08em;min-height:39px;
+  padding:6px 15px;box-shadow:0 0 11px #1ac78d29,inset 0 1px 0 #ffffff1a;}
+#sound-audition:active{background:#2a7859;}
+@media(max-width:520px){
+ .sound-header-actions{gap:4px;}
+ #sound-audition{min-height:37px;padding:6px 10px;}
+ .sound-live{font-size:8px;}
+}
