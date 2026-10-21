@@ -412,19 +412,67 @@ try{
 
     // SOUND uses a focused synth workflow and keeps complete source metadata in ALL.
     await page.locator('#tracks button').first().click();
-    await page.locator('#sound-tab').click();
+    // Instant track sound from PATTERN: change native filter without leaving
+    // the score. Same live input and one Undo as full Sound workspace.
+    assert.equal(await page.locator('#quick-sound').isVisible(),true);
+    assert.equal(await page.locator('#quick-sound-preset option').count()>=3,true);
+    const quickFilter=page.locator('#quick-sound-controls .dial-control[data-param="50"] input');
+    assert.equal(await quickFilter.count(),1,'Quick filter uses an accessible rotary range');
+    const quickOld=Number(await quickFilter.inputValue());
+    await page.evaluate(()=>{
+      const el=document.querySelector('#quick-sound-controls .dial-control[data-param="50"] input');
+      const next=Number(el.value)===Number(el.max)?Number(el.min):Number(el.max);
+      el.value=String(next);el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    assert.notEqual(Number(await page.locator('#quick-sound-controls .dial-control[data-param="50"] input').inputValue()),quickOld,
+      'Quick native filter edits should apply from the Pattern');
+    await page.locator('#undo').click();
+    assert.equal(Number(await page.locator('#quick-sound-controls .dial-control[data-param="50"] input').inputValue()),quickOld,
+      'One Undo restores the inline filter move');
+    await page.locator('#quick-sound-open').click();
+    assert.equal(await page.locator('#sound-tab').getAttribute('aria-pressed'),'true',
+      'One click from Pattern opens Sound for the selected track');
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    assert.equal(await page.locator('.sound-viz').count(),3);
+    assert.equal(await page.locator('#viz-env-handles circle').count(),4);
+    assert.match(await page.locator('#viz-env-line').getAttribute('d'),/^M /);
+    assert.match(await page.locator('#viz-lfo-line').getAttribute('d'),/^M /);
+    assert.match(await page.locator('#viz-filter-line').getAttribute('d'),/^M /);
+    assert.equal(await page.locator('#sound-macros .dial-control').count()>0,true,
+      'Native engine macros now use rotary instrument controls');
     assert.equal(await page.locator('#engine-select option').count(),12);
     assert.equal(await page.locator('#preset-select option').count()>=3,true);
     assert.equal(await page.locator('#sound-macros .sound-control').count(),8,'Eight original synth controls in TONE');
     assert.equal(await page.locator('#sound-shape .sound-control[data-param="28"] input').inputValue(),'-24',
       'Native WOBBLE transpose must be exposed in TONE');
-    await page.locator('#sound-pages button[data-sound-page="lfo"]').click();
+    await page.locator('[data-sound-jump="lfo"]').click();
+    assert.equal(await page.locator('#sound-pages button[data-sound-page="lfo"]').getAttribute('aria-pressed'),'true',
+      'Clicking the waveform moves to editable native LFO controls');
+    const initialWave=await page.locator('#viz-lfo-line').getAttribute('d');
+    const nativeRate=page.locator('#sound-lfo .sound-control[data-param="9"] input');
+    await page.evaluate(()=>{
+      const el=document.querySelector('#sound-lfo .sound-control[data-param="9"] input');
+      el.value=String(Number(el.value)===Number(el.max)?Number(el.min):Number(el.max));
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    assert.notEqual(await page.locator('#viz-lfo-line').getAttribute('d'),initialWave,
+      'LFO visual must update during drag, before native change/commit');
+    await nativeRate.dispatchEvent('change');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#viz-lfo-line').getAttribute('d'),initialWave,
+      'LFO shape and native rate restore together with Undo');
+
     assert.equal(await page.locator('#sound-lfo .sound-control').count(),11,'Complete native LFO controls');
     assert.equal(await page.locator('#sound-lfo .sound-control[data-param="14"] input').inputValue(),'40',
       'Native WOBBLE LFO-to-filter depth retained');
     assert.equal(await page.locator('#sound-macros').isVisible(),false,'Inactive pages not a long scroll');
+    await page.locator('[data-sound-jump="filter"]').click();
+    assert.equal(await page.locator('#sound-pages button[data-sound-page="tone"]').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('#tone-extras').getAttribute('open'),'',
+      'Filter graph gives direct access to otherwise folded native filter controls');
+    await page.locator('[data-sound-jump="lfo"]').click();
 
     // Instrument only the real AudioWorklet boundary: a slider input without
     // mouseup/change MUST emit a live param command before the gesture ends.
