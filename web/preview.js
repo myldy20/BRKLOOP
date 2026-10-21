@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Browser-only firmware audio. Explicit start is required by autoplay policies.
 export class LocalPreview {
-  constructor(getState, onError, onLevel = () => {}, onTransport = () => {}) {
+  constructor(getState, onError, onLevel = () => {}, onTransport = () => {}, onScope = () => {}) {
     this.getState = getState;
     this.onError = onError;
     this.onLevel = onLevel;
     this.onTransport = onTransport;
+    this.onScope = onScope;
     this.context = null;
     this.node = null;
     this.loading = null;
@@ -43,6 +44,7 @@ export class LocalPreview {
         else {
           if (data.peak != null) this.onLevel(data.peak);
           if (data.transport) this.onTransport(data.transport);
+          if (data.wave) this.onScope(data.wave, data.peak);
         }
       };
       this.node.onprocessorerror = () => this.onError(new Error('The audio engine stopped. Disable audio and try again.'));
