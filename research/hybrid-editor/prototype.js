@@ -45,7 +45,7 @@ for(let k=0;k<seed.tracks.length;k++){
 }
 const session=createResearchEditSession(seed);
 let grooveDraft=null,grooveSeed=1,melodyDraft=null,melodySeed=1,mutationDraft=null,mutationSeed=1,sceneDraft=null,sceneSeed=1;
-let songDraft=null,songSession=null,songSeed=1,songIndex=0,songActive=-1,songPlaying=false;
+let songDraft=null,songSession=null,songSeed=1,songIndex=0,songActive=-1,songCycle=-1,songPlaying=false;
 const modeForTrack=['step','step','step','step'];
 let octave=3,rollOctave=3,selectedPitch=48,drumLane=0,auto=false,chord=false,chordNotes=[],player=null,playing=false;
 let workspaceTab='pattern',keyboardVisible=true,rollScroll={left:0,top:0};
@@ -673,14 +673,15 @@ function previewScene(next){
 }
 function stopSongPlayback(){
   if(!songPlaying)return;
-  songPlaying=false;songActive=-1;playing=false;
+  songPlaying=false;songActive=-1;songCycle=-1;playing=false;
   player?.play(false);player?.panic();player?.clearArrangement();
   player?.sync();
   renderSong();
 }
 function onSongTransport(transport){
   if(!songPlaying||!songDraft||!Number.isInteger(transport.sectionIndex))return;
-  if(transport.sectionIndex===songActive)return;
+  if(transport.sectionIndex===songCycle)return;
+  songCycle=transport.sectionIndex;
   let cycle=transport.sectionIndex,selected=0;
   for(const section of songDraft.sections){
     const loops=section.repeats??1;
@@ -774,7 +775,7 @@ async function playSong(){
     await ensureAudio();
     const source=session.getState(),states=arrangementPlaybackStates(songDraft,source);
     player.arrange(states);player.play(true);
-    songPlaying=true;songActive=0;playing=true;
+    songPlaying=true;songActive=0;songCycle=0;playing=true;
     renderSong();status('PLAYING SONG · SLOOP audio-thread transitions');
   }catch(e){status('Song playback error: '+e.message);}
 }
