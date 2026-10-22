@@ -36,13 +36,13 @@ function seq(values,mapper,label){
   if(!Array.isArray(values)||values.length!==64)throw new TypeError('Invalid '+label+' length');
   return values.map(mapper);
 }
-function nativeTrack(track,k,baseline,engines){
+function nativeTrack(track,k,baseline,bank){
   if(!track||typeof track!=='object')throw new TypeError('Invalid track '+k);
-  const engine=number(track.engine,0,engines.length-1,'engine'),
-    preset=number(track.preset,0,k===3?32767:engines[engine].presets.length-1,'preset');
+  const engine=number(track.engine,0,bank.engines.length-1,'engine'),
+    preset=number(track.preset,0,k===3?32767:bank.engines[engine].presets.length-1,'preset');
   const p=ints(track.p,baseline.tracks[k].p.length,-32768,32767,'track controls');
   number(p[29],1,64,'track LEN');number(p[30],0,8,'track DIV');
-  if(k===3)number(p[engines.pe0??8],0,36,'drum kit');
+  if(k===3)number(p[bank.pe0],0,36,'drum kit');
   const fm6=ints(track.fm6,baseline.tracks[k].fm6.length,-32768,32767,'FM6 data');
   const step=seq(track.step,note,'synth steps'),dstep=seq(track.dstep,drum,'drum steps');
   const micro=ints(track.micro,64,-32,31,'microtiming'),
@@ -57,12 +57,12 @@ function nativeTrack(track,k,baseline,engines){
     throw new RangeError('Duplicate step lock');
   return {engine,preset,p,fm6,step,dstep,micro,fill,locks};
 }
-export function validateNativeProjectState(state,baseline,engines){
+export function validateNativeProjectState(state,baseline,bank){
   if(!state||!Array.isArray(state.tracks)||state.tracks.length!==4||
      !baseline||!Array.isArray(baseline.tracks)||baseline.tracks.length!==4)
     throw new TypeError('Invalid original SLOOP project structure');
   return {g:ints(state.g,baseline.g.length,-32768,32767,'global parameters'),
-    tracks:state.tracks.map((track,k)=>nativeTrack(track,k,baseline,engines))};
+    tracks:state.tracks.map((track,k)=>nativeTrack(track,k,baseline,bank))};
 }
 function songData(song){
   if(song===null)return null;
@@ -97,8 +97,8 @@ function songData(song){
   return result;
 }
 export function makeProject({name='BRKLOOP Session',state,arrangement=null,
-  songIndex=0,view={track:0,step:0,mode:'step'}},baseline,engines){
-  const native=validateNativeProjectState(state,baseline,engines);
+  songIndex=0,view={track:0,step:0,mode:'step'}},baseline,bank){
+  const native=validateNativeProjectState(state,baseline,bank);
   const song=songData(arrangement);
   const track=number(view.track,0,3,'selected track'),
     step=number(view.step,0,native.tracks[track].p[29]-1,'selected step');
@@ -107,13 +107,13 @@ export function makeProject({name='BRKLOOP Session',state,arrangement=null,
     arrangement:song,songIndex:song?number(songIndex,0,song.sections.length-1,'selected song section'):0,
     view:{track,step,mode:view.mode}};
 }
-export function parseProject(text,baseline,engines){
+export function parseProject(text,baseline,bank){
   if(typeof text!=='string'||text.length>MAX_PROJECT_BYTES)
     throw new RangeError('Project exceeds 5 MB');
-  return makeProject(JSON.parse(text),baseline,engines);
+  return makeProject(JSON.parse(text),baseline,bank);
 }
-export function serializeProject(value,baseline,engines){
-  const project=makeProject(value,baseline,engines);
+export function serializeProject(value,baseline,bank){
+  const project=makeProject(value,baseline,bank);
   const json=JSON.stringify(project,null,2);
   if(json.length>MAX_PROJECT_BYTES)throw new RangeError('Project exceeds 5 MB');
   return json;
