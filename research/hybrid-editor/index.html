@@ -237,10 +237,17 @@
   <div class="sound-header">
     <div class="sound-identity"><small>SOUND WORKSPACE · SLOOP DSP</small><h2 id="sound-title">Wobble</h2><span class="hint" id="sound-subtitle">Native factory preset</span></div>
     <div class="sound-header-actions">
+      <button type="button" id="user-sound-save-open">SAVE PATCH</button>
       <button type="button" id="sound-audition" aria-label="Hear selected native instrument">▶ HEAR</button>
       <span class="sound-live"><span class="live-dot"></span> NATIVE DSP</span>
     </div>
   </div>
+  <form id="user-sound-save-form" class="user-sound-save" hidden>
+    <label>NAME YOUR SOUND<input id="user-sound-name" type="text" maxlength="48" placeholder="My bass, warm pad…" aria-label="Custom sound name" autocomplete="off" required></label>
+    <button type="submit" id="user-sound-save">SAVE TO MY SOUNDS</button>
+    <button type="button" id="user-sound-save-cancel">CANCEL</button>
+    <span>Stores the complete native synth patch, including ADSR, LFO, filter, FX and FM6 settings. Tracks and notes stay separate.</span>
+  </form>
   <div class="sound-selectors">
     <label id="engine-wrap">ENGINE<select id="engine-select" aria-label="Sound engine"></select></label>
     <label id="preset-wrap">FACTORY SOUND<select id="preset-select" aria-label="Factory preset"></select></label>
@@ -255,7 +262,13 @@
     <div class="browser-filters">
       <label>SEARCH<input type="search" id="sound-browser-query" placeholder="wobble, bass, pad, lead…" autocomplete="off" aria-label="Search factory sounds"></label>
       <label id="sound-browser-engine-wrap">ENGINE<select id="sound-browser-engine" aria-label="Filter sounds by engine"></select></label>
+      <button type="button" id="sound-browser-mine" aria-pressed="false">MY SOUNDS <span id="sound-my-count"></span></button>
       <button type="button" id="sound-browser-saved" aria-pressed="false">☆ FAVORITES</button>
+    </div>
+    <div class="user-sound-file-actions">
+      <button type="button" id="user-sounds-export">EXPORT MY SOUNDS (.JSON)</button>
+      <button type="button" id="user-sounds-import">IMPORT .JSON</button>
+      <input id="user-sounds-file" type="file" accept=".json,application/json" hidden aria-label="Import BRKLOOP user sounds JSON">
     </div>
     <div class="browser-middle">
       <div id="sound-browser-meta" role="status" aria-live="polite">153 original synth presets</div>
@@ -270,7 +283,7 @@
       <button type="button" id="sound-browser-cancel" disabled>CANCEL PREVIEW</button>
       <button type="button" id="sound-browser-use" disabled>USE THIS SOUND</button>
     </div>
-    <p class="browser-note">☆ Favorites save factory preset references in this browser. Your edited synth parameters still belong to the current project session.</p>
+    <p class="browser-note">★ Factory favorites and MY SOUNDS are stored in this browser. Export your custom patches to JSON for backup or transfer. Imported patches are validated before saving. Applying any sound preserves track length, notes and mixer settings.</p>
   </section>
   <details class="sound-scope" id="sound-scope"><summary>OSCILLOSCOPE <span>REAL SLOOP OUTPUT</span></summary>
     <div class="scope-head"><div><small>AUDIO / ORIGINAL SLOOP ENGINE</small><strong>Oscilloscope</strong></div>
