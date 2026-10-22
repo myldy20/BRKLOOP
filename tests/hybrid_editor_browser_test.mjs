@@ -194,6 +194,42 @@ try{
     assert.equal(await page.locator('.step-cell[data-step="0"] .pitch').textContent(),'·',
       'Arranger edits never overwrite the live pattern');
 
+    // A saved project is the actual four-track native song session,
+    // including evolving/locked arrangement sections, DSP state and view.
+    const projectDownload=page.waitForEvent('download');
+    await page.locator('#project-save').click();
+    const projectExport=await projectDownload;
+    assert.equal(projectExport.suggestedFilename(),'brkloop-project.json');
+    const projectJSON=await readFile(await projectExport.path(),'utf8');
+    const projectObject=JSON.parse(projectJSON);
+    assert.equal(projectObject.format,'BRKLOOP_PROJECT_V1');
+    assert.equal(projectObject.state.tracks.length,4);
+    assert.equal(projectObject.state.g.length,49);
+    assert.equal(projectObject.arrangement.sections.length,8);
+    assert.equal(projectObject.arrangement.sections[2].locked,true);
+    assert.equal(projectObject.songIndex,1);
+    assert.equal(projectObject.state.tracks[0].fm6.length>0,true);
+    await page.locator('#song-cancel').click();
+    assert.equal(await page.locator('#song-timeline button').count(),0);
+    await page.locator('#project-file').setInputFiles({name:'corrupted.json',
+      mimeType:'application/json',buffer:Buffer.from('{"format":"INVALID","state":{}}')});
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('Open project rejected'));
+    assert.equal(await page.locator('#song-timeline button').count(),0,
+      'Invalid project files never replace the current session');
+    await page.locator('#project-file').setInputFiles({name:'brkloop-project.json',
+      mimeType:'application/json',buffer:Buffer.from(projectJSON)});
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('OPENED '));
+    assert.equal(await page.locator('#pattern-tab').getAttribute('aria-pressed'),'true');
+    await page.locator('#song-tab').click();
+    assert.equal(await page.locator('#song-timeline button').count(),8,
+      'Open restores the entire edited song arrangement');
+    assert.equal(await page.locator('#song-timeline button[data-song-section="1"]').getAttribute('aria-pressed'),'true',
+      'Selected song section is restored from project document');
+    await page.locator('#song-timeline button[data-song-section="2"]').click();
+    assert.equal(await page.locator('#song-lock').textContent(),'UNLOCK',
+      'Locked sections remain protected across project save/open');
+    await page.locator('#song-timeline button[data-song-section="1"]').click();
+
     await page.locator('#song-play').click();
     await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('PLAYING SONG'),{
       timeout:15000});
