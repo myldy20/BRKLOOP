@@ -485,6 +485,82 @@ try{
     await page.locator('#undo').click();
     assert.equal(await page.locator('#preset-select option').count()>=3,true,
       'Original factory sound and WOBBLE are available again after Undo');
+    // Capture every native parameter and FM6 operator from a modified
+    // synth as one reusable MY SOUND. No note, step, LEN or mixer state is
+    // allowed to be bundled into the patch.
+    const originalDelay=await page.locator('#fx-delay').inputValue();
+    await page.locator('#fx-delay').fill(originalDelay==='87'?'35':'87');
+    await page.locator('#fx-delay').dispatchEvent('change');
+    const savedDelay=await page.locator('#fx-delay').inputValue();
+    await page.locator('#user-sound-save-open').click();
+    assert.equal(await page.locator('#user-sound-save-form').isVisible(),true);
+    await page.locator('#user-sound-name').fill('My Wobble Test');
+    await page.locator('#user-sound-save').click();
+    assert.equal(await page.locator('#user-sound-save-form').isVisible(),false);
+    const userStore=await page.evaluate(()=>JSON.parse(localStorage.getItem('brkloop.preview.my-sounds.v1')));
+    assert.equal(userStore.format,'BRKLOOP_USER_SOUNDS_V1');
+    assert.equal(userStore.sounds.length,1);
+    assert.equal(userStore.sounds[0].name,'My Wobble Test');
+    assert.equal(String(userStore.sounds[0].p[35]),savedDelay);
+    assert.equal(userStore.sounds[0].engine,0);
+    assert.equal('step' in userStore.sounds[0],false);
+    assert.equal(userStore.sounds[0].fm6.length>0,true);
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#fx-delay').inputValue(),originalDelay,
+      'Saving sound does not add an editor Undo or modify native score');
+
+    // Browse a saved custom sound on SYNTH 2, preview without edits, then
+    // apply across engines in one Undo while retaining the destination score.
+    await page.locator('#tracks button').nth(1).click();
+    const targetEngine=await page.locator('#engine-select').inputValue();
+    const targetDelay=await page.locator('#fx-delay').inputValue();
+    await page.locator('#sound-browse-open').click();
+    await page.locator('#sound-browser-engine').selectOption('all');
+    await page.locator('#sound-browser-mine').click();
+    assert.equal(await page.locator('#sound-browser-results .browser-result').count(),1);
+    assert.equal(await page.locator('.browser-result.is-custom').count(),1);
+    await page.locator('.browser-result.is-custom .browser-pick').click();
+    await page.waitForFunction(()=>document.getElementById('status').textContent.startsWith('AUDITION '),
+      {timeout:15000});
+    assert.equal(await page.locator('#engine-select').inputValue(),targetEngine,
+      'Custom sound audition must not change target track until Use');
+    await page.locator('#sound-browser-use').click();
+    assert.equal(await page.locator('#engine-select').inputValue(),'0');
+    assert.equal(await page.locator('#fx-delay').inputValue(),savedDelay);
+    assert.equal(await page.locator('#sound-title').textContent(),'My Wobble Test');
+    await page.locator('#undo').click();
+    assert.equal(await page.locator('#engine-select').inputValue(),targetEngine,
+      'One Undo restores original target synth engine');
+    assert.equal(await page.locator('#fx-delay').inputValue(),targetDelay);
+    await page.locator('#tracks button').first().click();
+
+    // Export portable JSON, delete with two explicit clicks, then import the
+    // validated patch. Reject a damaged input without destroying the library.
+    await page.locator('#sound-browse-open').click();
+    const soundExport=page.waitForEvent('download');
+    await page.locator('#user-sounds-export').click();
+    const soundExported=await soundExport;
+    assert.equal(soundExported.suggestedFilename(),'brkloop-my-sounds.json');
+    const savedJson=await readFile(await soundExported.path(),'utf8');
+    assert.equal(JSON.parse(savedJson).sounds.length,1);
+    assert.equal(await page.locator('.browser-result.is-custom').count(),1);
+    await page.locator('.browser-result.is-custom .browser-remove').click();
+    assert.match(await page.locator('.browser-result.is-custom .browser-remove').textContent(),/CONFIRM/);
+    await page.locator('.browser-result.is-custom .browser-remove').click();
+    assert.equal(await page.locator('.browser-result.is-custom').count(),0);
+    assert.equal(JSON.parse(await page.evaluate(()=>localStorage.getItem('brkloop.preview.my-sounds.v1'))).sounds.length,0);
+    await page.locator('#user-sounds-file').setInputFiles({name:'damaged.json',
+      mimeType:'application/json',buffer:Buffer.from('{"format":"INVALID","sounds":[]}')});
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Import rejected'));
+    await page.locator('#user-sounds-file').setInputFiles({name:'patches.json',
+      mimeType:'application/json',buffer:Buffer.from(savedJson)});
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('IMPORTED 1'));
+    assert.equal(await page.locator('.browser-result.is-custom').count(),1);
+    await page.locator('#user-sounds-file').setInputFiles({name:'again.json',
+      mimeType:'application/json',buffer:Buffer.from(savedJson)});
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Nothing imported'));
+    assert.equal(await page.locator('.browser-result.is-custom').count(),1);
+    await page.locator('#sound-browse-open').click();
     // Sound graphs now ARE controls. No Edit hop and no decorative dead charts.
     assert.equal(await page.locator('#scope-canvas').isVisible(),false,
       'Real oscilloscope is optional instead of permanently occupying the first viewport');
@@ -737,6 +813,11 @@ try{
       'Saved native factory favorites survive a complete page reload');
     await page.locator('#sound-browser-query').fill('wobble');
     assert.equal(await page.locator('#sound-browser-results .browser-result').count()>=1,true);
+    assert.equal(await page.locator('#sound-browser-mine').isVisible(),true);
+    await page.locator('#sound-browser-saved').click();
+    await page.locator('#sound-browser-mine').click();
+    assert.equal(await page.locator('.browser-result.is-custom').count(),1,
+      'Full native custom patch library persists across page reload alongside factory favorites');
     assert.deepEqual(failures,[],d.name+' JavaScript console exceptions after reload');
     await context.close();
     console.log('PASS '+d.name+': native 153-bank/WOBBLE, tempo Undo, STEP/ROLL, Sound and real SLOOP WASM');

@@ -55,6 +55,8 @@ jobs:
           node --check research/pattern-mutate.mjs
           node --check research/linked-scene.mjs
           node --check research/song-arranger.mjs
+          node --check research/user-sounds.mjs
+          node tests/user_sounds_test.mjs
           node tests/song_arranger_test.mjs
           node tests/song_arranger_edit_test.mjs
           node tests/worklet_arrangement_test.mjs
@@ -77,7 +79,7 @@ jobs:
           cp dist/audit/bank-v2-candidate.json dist/site/bank-preview-v2.json
           cp LICENSE LICENSING.md dist/site/
           cp preview/index.html dist/site/preview/
-          cp research/shared-edit-commands.mjs research/groove-tools.mjs research/melodic-ideas.mjs research/pattern-mutate.mjs research/linked-scene.mjs research/song-arranger.mjs dist/site/research/
+          cp research/shared-edit-commands.mjs research/groove-tools.mjs research/melodic-ideas.mjs research/pattern-mutate.mjs research/linked-scene.mjs research/song-arranger.mjs research/user-sounds.mjs dist/site/research/
           cp research/hybrid-editor/index.html research/hybrid-editor/prototype.css research/hybrid-editor/prototype.js research/hybrid-editor/panel-pitch.mjs dist/site/research/hybrid-editor/
           touch dist/site/.nojekyll
       - name: Browser regression (phone + desktop)
