@@ -539,9 +539,9 @@ try{
     await page.locator('#sound-browse-open').click();
     const soundExport=page.waitForEvent('download');
     await page.locator('#user-sounds-export').click();
-    const exported=await soundExport;
-    assert.equal(exported.suggestedFilename(),'brkloop-my-sounds.json');
-    const savedJson=await readFile(await exported.path(),'utf8');
+    const soundExported=await soundExport;
+    assert.equal(soundExported.suggestedFilename(),'brkloop-my-sounds.json');
+    const savedJson=await readFile(await soundExported.path(),'utf8');
     assert.equal(JSON.parse(savedJson).sounds.length,1);
     assert.equal(await page.locator('.browser-result.is-custom').count(),1);
     await page.locator('.browser-result.is-custom .browser-remove').click();
