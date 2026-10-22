@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // RESEARCH ONLY. Native SLOOP state, shared Step/Roll command session, no app.js changes.
 import {createResearchEditSession} from '../shared-edit-commands.mjs';
+import {USER_SOUND_LIBRARY_FORMAT,MAX_USER_SOUNDS,makeUserSound,
+  validateUserSound,importUserSoundFile,exportUserSoundLibrary,
+  applyUserSoundToTrack,PRESERVED_TRACK_PARAMS} from '../user-sounds.mjs';
 import {LocalPreview} from '../../web/preview.js';
 import {panelAuditionPitch} from './panel-pitch.mjs';
 import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
@@ -68,7 +71,37 @@ function readSoundFavorites(){
   }catch{return new Set();}
 }
 const soundFavorites=readSoundFavorites();
-let soundBrowserOpen=false,soundBrowserSavedOnly=false,soundCandidate=null;
+const USER_SOUNDS_KEY='brkloop.preview.my-sounds.v1';
+const userSoundLimits={engines:bank.engines.length,pLength:seed.tracks[0].p.length,
+  fm6Length:seed.tracks[0].fm6.length};
+function readUserSounds(){
+  try{
+    const text=localStorage.getItem(USER_SOUNDS_KEY);
+    return text?importUserSoundFile(text,userSoundLimits).sounds:[];
+  }catch{return [];}
+}
+let userSounds=readUserSounds();
+let soundBrowserOpen=false,soundBrowserSavedOnly=false,soundBrowserOwnOnly=false,
+  soundCandidate=null,pendingSoundDelete=null;
+function saveUserSoundLibrary(next){
+  // Persist first. A storage/quota failure must never be presented as saved.
+  const serialized=exportUserSoundLibrary(next,userSoundLimits);
+  try{localStorage.setItem(USER_SOUNDS_KEY,serialized);}
+  catch{throw new Error('Browser storage unavailable. Export your patches to JSON before leaving.');}
+  userSounds=next;
+}
+function userSoundItem(sound){
+  return {id:sound.id,kind:'u',engine:sound.engine,index:sound.preset,
+    name:sound.name,category:'MY SOUND · '+bank.engines[sound.engine].name,
+    sound};
+}
+function matchedUserSound(track){
+  if(!track||!Array.isArray(track.p)||!Array.isArray(track.fm6))return null;
+  return userSounds.find(sound=>sound.engine===track.engine&&sound.preset===track.preset&&
+    sound.fm6.every((n,i)=>track.fm6[i]===n)&&
+    sound.p.every((n,i)=>PRESERVED_TRACK_PARAMS.includes(i)||track.p[i]===n))||null;
+}
+
 
 function soundState(){
   const state=session.getState();
@@ -97,6 +130,8 @@ function soundState(){
   if(soundCandidate&&workspaceTab==='sound'){
     const {v}=current(),t=state.tracks[v.track],item=soundCandidate;
     if(item.kind==='k'&&v.track===3)t.p[bank.pe0]=item.index;
+    if(item.kind==='u'&&v.track!==3)
+      state.tracks[v.track]=applyUserSoundToTrack(t,item.sound,userSoundLimits);
     if(item.kind==='s'&&v.track!==3){
       const preset=bank.engines[item.engine].presets[item.index];
       const keep=[0,25,26,27,29,30,31,32,39,40,49];
@@ -834,9 +869,11 @@ function browserEntries(){
   const drums=current().v.track===3;
   const query=$('sound-browser-query').value.trim().toLocaleLowerCase();
   const filter=$('sound-browser-engine').value;
-  return soundEntries.filter(x=>(drums?x.kind==='k':x.kind==='s')&&
+  return [...(!drums?userSounds.map(userSoundItem):[]),...soundEntries].filter(x=>
+    (drums?x.kind==='k':x.kind!=='k')&&
+    (!soundBrowserOwnOnly||x.kind==='u')&&
     (drums||filter==='all'||x.engine===Number(filter))&&
-    (!soundBrowserSavedOnly||soundFavorites.has(x.id))&&
+    (!soundBrowserSavedOnly||x.kind==='u'||soundFavorites.has(x.id))&&
     (!query||(x.name+' '+x.category).toLocaleLowerCase().includes(query)));
 }
 function renderSoundBrowser(){
@@ -853,11 +890,14 @@ function renderSoundBrowser(){
   if(!soundBrowserOpen)return;
   const drums=current().v.track===3;
   $('sound-browser-engine-wrap').hidden=drums;
+  $('sound-browser-mine').setAttribute('aria-pressed',String(soundBrowserOwnOnly));
+  $('sound-my-count').textContent=String(userSounds.length);
+  $('user-sounds-export').disabled=!userSounds.length;
   $('sound-browser-saved').setAttribute('aria-pressed',String(soundBrowserSavedOnly));
   $('sound-browser-saved').textContent=soundBrowserSavedOnly?'★ FAVORITES':'☆ FAVORITES';
   const entries=browserEntries();
-  $('sound-browser-meta').textContent=entries.length+' OF '+(drums?37:153)+
-    ' ORIGINAL '+(drums?'KITS':'SOUNDS');
+  $('sound-browser-meta').textContent=entries.length+' MATCHES · '+
+    (drums?'37 ORIGINAL KITS':'153 FACTORY + '+userSounds.length+' MY SOUNDS');
   const list=$('sound-browser-results');list.replaceChildren();
   const activeId=activeFactoryRef();
   for(const item of entries){
@@ -865,6 +905,7 @@ function renderSoundBrowser(){
     row.dataset.soundId=item.id;row.setAttribute('role','option');
     row.setAttribute('aria-selected',String(soundCandidate?.id===item.id));
     if(item.id===activeId)row.classList.add('is-current');
+    if(item.kind==='u')row.classList.add('is-custom');
     if(soundCandidate?.id===item.id)row.classList.add('is-preview');
     const choose=newEl('button','browser-pick');
     choose.type='button';
@@ -872,16 +913,34 @@ function renderSoundBrowser(){
     if(item.id===activeId)choose.append(newEl('small','browser-current','CURRENT'));
     choose.setAttribute('aria-label','Audition '+item.name+' in '+item.category);
     choose.addEventListener('click',()=>void chooseSoundCandidate(item));
-    const star=newEl('button','browser-star',soundFavorites.has(item.id)?'★':'☆');
-    star.type='button';star.setAttribute('aria-pressed',String(soundFavorites.has(item.id)));
-    star.setAttribute('aria-label',(soundFavorites.has(item.id)?'Remove favorite ':'Save favorite ')+item.name);
-    star.addEventListener('click',()=>{
-      if(soundFavorites.has(item.id))soundFavorites.delete(item.id);
-      else soundFavorites.add(item.id);
-      try{localStorage.setItem(SOUNDS_KEY,JSON.stringify([...soundFavorites]));}catch{}
-      renderSoundBrowser();
-    });
-    row.append(choose,star);list.append(row);
+    if(item.kind==='u'){
+      const remove=newEl('button','browser-remove',pendingSoundDelete===item.id?'CONFIRM':'DELETE');
+      remove.type='button';remove.setAttribute('aria-label','Delete saved patch '+item.name);
+      remove.addEventListener('click',()=>{
+        if(pendingSoundDelete!==item.id){
+          pendingSoundDelete=item.id;renderSoundBrowser();return;
+        }
+        try{
+          saveUserSoundLibrary(userSounds.filter(x=>x.id!==item.id));
+          if(soundCandidate?.id===item.id)cancelSoundCandidate();
+          pendingSoundDelete=null;renderSoundBrowser();
+          status('Deleted saved patch '+item.name+'. Current native track unchanged.');
+        }catch(e){status(e.message);}
+      });
+      row.append(choose,remove);
+    }else{
+      const star=newEl('button','browser-star',soundFavorites.has(item.id)?'★':'☆');
+      star.type='button';star.setAttribute('aria-pressed',String(soundFavorites.has(item.id)));
+      star.setAttribute('aria-label',(soundFavorites.has(item.id)?'Remove favorite ':'Save favorite ')+item.name);
+      star.addEventListener('click',()=>{
+        if(soundFavorites.has(item.id))soundFavorites.delete(item.id);
+        else soundFavorites.add(item.id);
+        try{localStorage.setItem(SOUNDS_KEY,JSON.stringify([...soundFavorites]));}catch{}
+        renderSoundBrowser();
+      });
+      row.append(choose,star);
+    }
+    list.append(row);
   }
   if(!entries.length)list.append(newEl('p','browser-empty','No matching factory sounds. Clear search or show all.'));
   const candidate=soundCandidate;
@@ -917,7 +976,7 @@ function closeSoundBrowser(){
 }
 async function chooseSoundCandidate(item){
   if(!soundBrowserOpen)return;
-  if(current().v.track===3?item.kind!=='k':item.kind!=='s')return;
+  if(current().v.track===3?item.kind!=='k':item.kind==='k')return;
   soundCandidate=item;
   player?.panic();player?.sync();
   renderSoundBrowser();
@@ -928,8 +987,8 @@ async function chooseSoundCandidate(item){
     const {v,track}=current();
     if(v.track===3)player.hit(item.index,0,112);
     else{
-      const preset=bank.engines[item.engine].presets[item.index];
-      const pitch=panelAuditionPitch(72,preset.p);
+      const p=item.kind==='u'?item.sound.p:bank.engines[item.engine].presets[item.index].p;
+      const pitch=panelAuditionPitch(72,p);
       player.note(v.track,pitch,true);
       setTimeout(()=>player?.note(v.track,pitch,false),450);
     }
@@ -945,9 +1004,9 @@ function applySoundCandidate(){
   if(item.kind==='k')edited=commit({type:'setTrackParam',track:3,
     param:bank.pe0,value:item.index});
   else{
-    const preset=bank.engines[item.engine].presets[item.index];
+    const patch=item.kind==='u'?item.sound:bank.engines[item.engine].presets[item.index];
     edited=commit({type:'setFactorySound',track:v.track,
-      engine:item.engine,preset:item.index,p:preset.p,fm6:preset.fm6});
+      engine:item.engine,preset:item.index,p:patch.p,fm6:patch.fm6});
   }
   if(edited){soundBrowserOpen=false;renderSoundBrowser();
     status('USED '+item.name+' · native factory sound · one Undo');}
@@ -968,8 +1027,10 @@ function renderSound(){
   const {v,track}=current(),drums=v.track===3;
   const engine=drums?null:bank.engines[track.engine];
   const preset=drums?(bank.kits[track.p[bank.pe0]]||'Kit'):(engine.presets[track.preset]?.name||'Custom');
-  $('sound-title').textContent=preset;
-  $('sound-subtitle').textContent=drums?'DRUMS · 16 LANES · '+bank.kits.length+' KITS':engine.name+' ENGINE · '+engine.presets.length+' FACTORY SOUNDS';
+  const own=drums?null:matchedUserSound(track);
+  $('sound-title').textContent=own?own.name:preset;
+  $('sound-subtitle').textContent=drums?'DRUMS · 16 LANES · '+bank.kits.length+' KITS':
+    engine.name+' ENGINE · '+(own?'MY SAVED PATCH':'NATIVE FACTORY SOUND / EDITABLE');
   $('engine-wrap').hidden=drums;$('preset-wrap').hidden=drums;$('kit-wrap').hidden=!drums;
   renderSoundBrowser();
   if(drums)optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
