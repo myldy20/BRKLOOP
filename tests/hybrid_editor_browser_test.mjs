@@ -551,14 +551,14 @@ try{
     assert.equal(JSON.parse(await page.evaluate(()=>localStorage.getItem('brkloop.preview.my-sounds.v1'))).sounds.length,0);
     await page.locator('#user-sounds-file').setInputFiles({name:'damaged.json',
       mimeType:'application/json',buffer:Buffer.from('{"format":"INVALID","sounds":[]}')});
-    assert.match(await page.locator('#status').textContent(),/Import rejected/);
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Import rejected'));
     await page.locator('#user-sounds-file').setInputFiles({name:'patches.json',
       mimeType:'application/json',buffer:Buffer.from(savedJson)});
-    assert.match(await page.locator('#status').textContent(),/IMPORTED 1/);
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('IMPORTED 1'));
     assert.equal(await page.locator('.browser-result.is-custom').count(),1);
     await page.locator('#user-sounds-file').setInputFiles({name:'again.json',
       mimeType:'application/json',buffer:Buffer.from(savedJson)});
-    assert.match(await page.locator('#status').textContent(),/Nothing imported/);
+    await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Nothing imported'));
     assert.equal(await page.locator('.browser-result.is-custom').count(),1);
     await page.locator('#sound-browse-open').click();
     // Sound graphs now ARE controls. No Edit hop and no decorative dead charts.
