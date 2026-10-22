@@ -225,6 +225,26 @@ export function createResearchEditSession(initial,{historyLimit=64}={}){
   return Object.freeze({
     getState:()=>copy(current),
     getView:()=>({...view}),
+    // A checked portable project replaces all four native tracks in one
+    // undoable transaction. Validation against the compiled bank happens
+    // at the file boundary before this API is called.
+    restore(next){
+      finishGesture();
+      if(!next||!Array.isArray(next.g)||!Array.isArray(next.tracks)||
+         next.g.length!==current.g.length||next.tracks.length!==4)
+        throw new TypeError('Incompatible original SLOOP project');
+      const target=copy(next);
+      for(let k=0;k<4;k++){
+        const old=current.tracks[k],t=target.tracks[k];
+        if(!t||t.p?.length!==old.p.length||t.fm6?.length!==old.fm6.length||
+           t.step?.length!==64||t.dstep?.length!==64||t.micro?.length!==64||
+           t.fill?.length!==16||!Array.isArray(t.locks))
+          throw new TypeError('Incompatible original SLOOP track '+k);
+      }
+      if(JSON.stringify(target)===JSON.stringify(current))return false;
+      undo.push(current);if(undo.length>historyLimit)undo.shift();
+      current=target;redo=[];return true;
+    },
     select(track,step){const t=trackAt(current,track);stepAt(t,step);view.track=track;view.step=step;return {...view};},
     setMode(mode){if(mode!=='step'&&mode!=='roll')throw Error('Mode must be step or roll');view.mode=mode;return {...view};},
     preview(cmd){
