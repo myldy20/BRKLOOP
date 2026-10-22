@@ -861,6 +861,63 @@ function soundControl(container,descriptor,value,command,displayName,paramId){
   }
   container.append(parent);
 }
+function toggleSavePatch(open){
+  if(current().v.track===3){status('Save Patch is available for synth tracks only.');return;}
+  $('user-sound-save-form').hidden=!open;
+  $('user-sound-save-open').setAttribute('aria-expanded',String(open));
+  if(open){
+    const {track}=current(),base=bank.engines[track.engine].presets[track.preset]?.name||'SYNTH';
+    $('user-sound-name').value=matchedUserSound(track)?.name||base+' edit';
+    $('user-sound-name').focus();
+    $('user-sound-name').select();
+  }
+}
+function saveCurrentUserPatch(){
+  if(current().v.track===3)return;
+  try{
+    if(userSounds.length>=MAX_USER_SOUNDS)throw new Error('Library full. Export or delete a patch.');
+    const track=current().track,name=$('user-sound-name').value.trim();
+    const id='u:'+crypto.randomUUID().replace(/-/g,'');
+    const patch=makeUserSound({id,name,track},userSoundLimits);
+    saveUserSoundLibrary([...userSounds,patch]);
+    toggleSavePatch(false);
+    if(soundBrowserOpen)renderSoundBrowser();
+    renderSound();
+    status('SAVED '+patch.name+' · complete native SLOOP patch · '+userSounds.length+' MY SOUNDS');
+  }catch(e){status('Save patch: '+e.message);}
+}
+function exportMySoundLibrary(){
+  if(!userSounds.length)return;
+  try{
+    const data=exportUserSoundLibrary(userSounds,userSoundLimits);
+    const blob=new Blob([data],{type:'application/json'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='brkloop-my-sounds.json';link.style.display='none';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status('EXPORTED '+userSounds.length+' custom patches to portable JSON');
+  }catch(e){status('Export failed: '+e.message);}
+}
+async function importMySoundLibrary(file){
+  if(!file)return;
+  try{
+    if(file.size>1024*1024)throw new RangeError('File exceeds 1 MB');
+    const library=importUserSoundFile(await file.text(),userSoundLimits);
+    const existing=new Set(userSounds.map(x=>x.id));
+    const incoming=library.sounds.filter(x=>!existing.has(x.id));
+    if(userSounds.length+incoming.length>MAX_USER_SOUNDS)
+      throw new RangeError('Too many patches. Maximum '+MAX_USER_SOUNDS);
+    if(incoming.length){
+      saveUserSoundLibrary([...userSounds,...incoming]);
+      soundBrowserSavedOnly=false;soundBrowserOwnOnly=true;
+      cancelSoundCandidate();
+      renderSoundBrowser();
+    }
+    status(incoming.length?'IMPORTED '+incoming.length+' custom patches · validated native SLOOP payload':
+      'Nothing imported: all patch IDs already exist');
+  }catch(e){status('Import rejected: '+e.message);}
+  finally{$('user-sounds-file').value='';}
+}
 function activeFactoryRef(){
   const {v,track}=current();
   return v.track===3?'k:'+track.p[bank.pe0]:'s:'+track.engine+':'+track.preset;
@@ -890,6 +947,7 @@ function renderSoundBrowser(){
   if(!soundBrowserOpen)return;
   const drums=current().v.track===3;
   $('sound-browser-engine-wrap').hidden=drums;
+  $('sound-browser-mine').hidden=drums;
   $('sound-browser-mine').setAttribute('aria-pressed',String(soundBrowserOwnOnly));
   $('sound-my-count').textContent=String(userSounds.length);
   $('user-sounds-export').disabled=!userSounds.length;
@@ -1032,6 +1090,8 @@ function renderSound(){
   $('sound-subtitle').textContent=drums?'DRUMS · 16 LANES · '+bank.kits.length+' KITS':
     engine.name+' ENGINE · '+(own?'MY SAVED PATCH':'NATIVE FACTORY SOUND / EDITABLE');
   $('engine-wrap').hidden=drums;$('preset-wrap').hidden=drums;$('kit-wrap').hidden=!drums;
+  $('user-sound-save-open').hidden=drums;
+  if(drums)$('user-sound-save-form').hidden=true;
   renderSoundBrowser();
   if(drums)optionList($('kit-select'),bank.kits.slice(0,37),clamp(track.p[bank.pe0],0,36));
   else{
@@ -1601,6 +1661,16 @@ $('quick-sound-preset').addEventListener('change',e=>{
       p:preset.p,fm6:preset.fm6});
   }
 });
+$('user-sound-save-open').addEventListener('click',()=>toggleSavePatch($('user-sound-save-form').hidden));
+$('user-sound-save-cancel').addEventListener('click',()=>toggleSavePatch(false));
+$('user-sound-save-form').addEventListener('submit',e=>{e.preventDefault();saveCurrentUserPatch();});
+$('sound-browser-mine').addEventListener('click',()=>{
+  soundBrowserOwnOnly=!soundBrowserOwnOnly;
+  soundBrowserSavedOnly=false;cancelSoundCandidate();renderSoundBrowser();
+});
+$('user-sounds-export').addEventListener('click',exportMySoundLibrary);
+$('user-sounds-import').addEventListener('click',()=>$('user-sounds-file').click());
+$('user-sounds-file').addEventListener('change',e=>void importMySoundLibrary(e.target.files?.[0]));
 $('sound-browse-open').addEventListener('click',openSoundBrowser);
 $('sound-browse-close').addEventListener('click',closeSoundBrowser);
 $('sound-browser-cancel').addEventListener('click',cancelSoundCandidate);
