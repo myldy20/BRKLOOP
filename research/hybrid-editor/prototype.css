@@ -900,3 +900,184 @@ footer{color:#7f8c9d;}
   .user-sound-file-actions button{white-space:normal;font-size:9px;}
   .browser-result.is-custom{grid-template-columns:minmax(0,1fr) 57px;}
 }
+
+/* Desktop workstation layout (>=1150px).
+   At 1440px the old 1320px shell wasted width, stacked four top rows,
+   split 16 steps over two rows and vertically serialized Sound modules.
+   Touch layout keeps its current hit targets and navigation. */
+@media(min-width:1150px){
+  .shell{
+    max-width:1920px;width:100%;margin:0 auto;padding:10px 14px;
+    display:grid;grid-template-columns:minmax(0,1fr) max-content;
+    gap:7px 12px;align-content:start;
+  }
+  .shell>header{grid-column:1;grid-row:1;min-width:0;min-height:43px;
+    display:flex;align-items:center;gap:10px;margin:0;padding:0 4px;}
+  header h1{font-size:20px;line-height:1.05;letter-spacing:-.03em;}
+  header small{font-size:8px;letter-spacing:.07em;}
+  .status{font-size:10px;line-height:1.25;max-width:min(31vw,420px);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    margin-left:auto;padding:4px 5px;min-width:0;}
+  .shell>.topbar{grid-column:2;grid-row:1;justify-self:end;align-self:center;
+    margin:0;padding:4px 6px;min-height:43px;gap:5px;flex-wrap:nowrap;
+    background:transparent;border-color:#252e38;box-shadow:none;}
+  .topbar>button{min-height:33px;padding:0 9px;font-size:11px;}
+  .topbar .divider{height:20px;margin:0 1px;}
+  .transport-tempo{margin-left:5px;gap:6px;}
+  .transport-tempo label{gap:4px;font-size:9px;}
+  .transport-tempo input{height:33px;width:57px;font-size:13px;padding:3px;}
+  .shell>.tracks{grid-column:1;grid-row:2;align-self:stretch;gap:6px;}
+  .track{min-height:43px;padding:5px 10px;border-radius:6px;gap:2px;
+    display:grid;grid-template-columns:23px minmax(0,1fr);grid-template-rows:18px 13px;
+    align-content:center;column-gap:5px;text-align:left;}
+  .track small{font-size:9px;grid-row:1/3;align-self:center;}
+  .track strong{font-size:11px;grid-column:2;line-height:1.25;}
+  .track span{font-size:9px;grid-column:2;overflow:hidden;white-space:nowrap;
+    text-overflow:ellipsis;line-height:1.1;}
+  .shell>.workspace-tabs{grid-column:2;grid-row:2;align-self:stretch;
+    width:310px;min-width:310px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:4px;padding:3px;margin:0;border-radius:8px;}
+  .workspace-tabs button{min-height:42px;font-size:11px;letter-spacing:.04em;border-radius:6px;}
+  .shell>.workspace{grid-column:1/-1;grid-row:3;margin:0;}
+  .workspace{grid-template-columns:minmax(0,1fr) 250px;gap:9px;align-items:start;}
+  .workspace.sound-open,.workspace.song-open{grid-template-columns:minmax(0,1fr);}
+  .workspace>.editor{min-height:0;padding:10px 12px;border-radius:9px;}
+  #pattern-panel{display:grid;grid-template-columns:minmax(230px,auto) minmax(0,1fr);
+    grid-auto-rows:min-content;column-gap:12px;row-gap:5px;align-content:start;}
+  #pattern-panel .editor-head{grid-column:1;grid-row:1;gap:12px;min-height:39px;}
+  .editor-head h2{font-size:16px;line-height:1.2;margin:1px 0;}
+  .editor-head small{font-size:9px;}
+  #pattern-panel .mode{gap:3px;min-width:117px;}
+  #pattern-panel .mode button{min-height:34px;padding:3px 8px;font-size:10px;}
+  #pattern-panel .edit-options{grid-column:2;grid-row:1;min-width:0;
+    align-self:center;justify-content:flex-end;gap:8px;margin:0;padding:0;
+    border:0;flex-wrap:nowrap;}
+  .edit-options label{font-size:10px;gap:5px;}
+  .edit-options input[type=number]{width:51px;height:34px;padding:4px 6px;}
+  .edit-options select{height:34px;padding:4px 7px;max-width:112px;}
+  .edit-options input[type=checkbox]{width:17px;height:17px;}
+  #pattern-panel .quick-erase{min-height:34px;font-size:10px;}
+  #pattern-panel .edit-hint{display:none;}
+  #pattern-panel .tool-workbench{grid-column:1/-1;grid-row:2;margin:0;padding:0;
+    border:0;border-radius:0;background:transparent;}
+  #pattern-panel .tool-head{display:none;}
+  #pattern-panel .tool-choices{display:flex;justify-content:flex-start;gap:5px;}
+  #pattern-panel .tool-choices button{flex:0 1 auto;min-height:30px;
+    padding:4px 13px;min-width:106px;font-size:10px;border-radius:5px;}
+  #pattern-panel .editor-canvas{grid-column:1/-1;grid-row:3;margin:0;
+    max-height:min(62vh,620px);min-height:0;padding:8px;border-radius:7px;}
+  #pattern-panel .tool-dock{grid-column:1/-1;grid-row:4;}
+  .step-section{margin-bottom:7px;}
+  .step-section .section-title{font-size:9px;margin:0 0 4px;letter-spacing:.06em;}
+  .step-row{grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;margin-bottom:0;}
+  .step-cell{height:43px;gap:2px;min-height:0;padding:2px 3px;border-radius:4px;}
+  .step-cell .number{font-size:9px;}
+  .step-cell .pitch{font-size:10px;max-width:100%;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis;}
+  .roll-grid{grid-auto-rows:26px;}
+  .roll-cell{height:26px;min-height:26px;}
+  .inspector{position:sticky;top:8px;gap:6px;padding:10px;border-radius:9px;}
+  .inspector .selected{font-size:22px;line-height:1.05;}
+  .inspector #notes{font-size:11px;min-height:14px;}
+  .inspector-actions button{min-height:30px;}
+  .inspector label{font-size:10px;}
+  .inspector input[type=range]{height:19px;padding:0;}
+  .quick-sound{gap:5px;padding-top:7px;margin-top:3px;}
+  .quick-sound-name{font-size:11px;}
+  .quick-sound-preset select{height:32px;}
+  .quick-sound-controls .dial-control{min-height:94px;gap:3px;padding:5px 1px;}
+  .quick-sound-controls .dial-body{width:51px;height:51px;}
+  .quick-sound-controls .dial-pointer:before{height:10px;top:9px;}
+  .quick-sound-controls .dial-control .control-name{font-size:9px;min-height:15px;}
+  .shell>#keyboard-area{grid-column:1/-1;grid-row:4;padding:7px 10px;
+    border-radius:8px;}
+  .keyboard-area .keys-head{margin-bottom:5px;}
+  .keys-head strong{font-size:11px;margin-top:0;}
+  .keys-head small{font-size:8px;}
+  .keys-head button{min-height:29px;min-width:29px;padding:2px 8px;}
+  .keyboard{height:77px;}
+  .black-key{padding-top:19px;}
+  .white-key{padding-bottom:6px;}
+  #chord-preview{margin-top:4px;min-height:0;font-size:9px;}
+  .shell>footer{grid-column:1/-1;grid-row:5;text-align:left;
+    font-size:9px;padding:0 4px;}
+
+  /* Sound: editable graphs take one horizontal band, while FX and all eight
+     engine knobs share the next one. No giant empty right-hand pane. */
+  #sound-panel{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+    grid-auto-rows:min-content;gap:8px 12px;align-content:start;padding:11px 13px;}
+  #sound-panel>.sound-header{grid-column:1/-1;order:0;padding-bottom:6px;}
+  #sound-panel .sound-identity h2{font-size:21px;margin:1px 0;}
+  #sound-panel .sound-header-actions{gap:5px;}
+  #sound-panel .sound-header-actions button{min-height:33px;padding:4px 10px;}
+  #sound-panel .sound-selectors{grid-column:1/-1;order:1;display:flex;flex-wrap:wrap;
+    align-items:end;justify-content:flex-start;gap:8px;margin:0;}
+  .sound-selectors label{flex:0 1 200px;gap:3px;min-width:145px;}
+  .sound-selectors select{height:35px;font-size:12px;}
+  #sound-browse-open{min-height:35px;padding:5px 10px;font-size:10px;}
+  #user-sound-save-open{min-height:33px;padding:4px 10px;font-size:10px;}
+  #sound-panel>.user-sound-save{grid-column:1/-1;order:2;margin:0;}
+  #sound-panel>.sound-browser{grid-column:1/-1;order:3;margin:0;}
+  #sound-panel>.sound-visuals{grid-column:1/-1;order:4;margin:0;
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .sound-viz{padding:8px 10px;border-radius:7px;}
+  .sound-viz svg{height:79px;}
+  .viz-heading{margin-bottom:2px;}
+  .viz-heading strong{font-size:11px;}
+  .viz-heading span{font-size:9px;}
+  .viz-fields{margin:4px 0;gap:4px;}
+  .viz-fields input,.viz-fields select{height:29px;padding:3px 6px;font-size:11px;}
+  .viz-fields label{gap:2px;font-size:9px;}
+  .viz-caption{min-height:0;font-size:9px;line-height:1.35;padding-top:4px;}
+  #sound-panel>.fx-direct{grid-column:1/span 7;order:5;margin:0;padding:9px 11px;}
+  .fx-direct-title{padding-bottom:6px;margin-bottom:7px;}
+  .fx-direct-content{gap:8px;}
+  .fx-pad{height:107px;}
+  .fx-pad-hint{font-size:9px;margin-top:3px;}
+  .fx-direct-values input{height:33px;}
+  .fx-direct-knobs .dial-control{min-height:101px;}
+  .fx-direct-knobs .dial-body{width:50px;height:50px;}
+  #sound-panel>.sound-page[data-page="tone"]{grid-column:8/-1;order:6;
+    min-width:0;min-height:0;padding:9px 10px;border:1px solid #34414c;border-radius:8px;}
+  #sound-panel>.sound-page[data-page="tone"] .sound-section{margin:0;padding:0;}
+  .sound-page .section-title{font-size:10px;line-height:1.3;margin-bottom:5px;}
+  #sound-panel .sound-dials{grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:5px!important;}
+  #sound-panel .sound-control.dial-control{min-height:86px;padding:5px 1px;gap:2px;}
+  #sound-panel .dial-control .control-name{font-size:9px;min-height:17px;}
+  #sound-panel .dial-control .control-value{font-size:10px;}
+  #sound-panel .dial-body{width:48px;height:48px;}
+  #sound-panel .dial-pointer:before{top:8px;height:11px;}
+  #sound-panel .dial-face:before{inset:5px;}
+  #sound-panel .fx-direct-knobs .dial-control{min-height:101px;}
+  #sound-panel .fx-direct-knobs .dial-body{width:50px;height:50px;}
+  #sound-panel>.sound-scope{grid-column:1/-1;order:7;margin:0;}
+  #sound-panel>.sound-more{grid-column:1/-1;order:8;margin:0;}
+  #sound-panel>.sound-page[data-page]:not([data-page="tone"]){display:none!important;}
+  /* Native pages remain nested under More; override only at actual selection. */
+  #sound-panel>.sound-more .sound-page:not([hidden]){display:block;}
+  #sound-panel>.sound-more .sound-page .sound-controls{gap:5px 8px;}
+  #sound-panel>.sound-more .sound-control{min-height:41px;padding:5px 7px;}
+  #sound-panel>.sound-more .sound-section{padding:8px 0;}
+  #sound-panel>.sound-more .sound-page{min-height:0;}
+  #sound-panel>.sound-more .sound-pages{margin:4px 6px 7px;}
+  #sound-panel>.sound-more .sound-pages button{min-height:33px;padding:4px 9px;}
+  #sound-panel.browsing>.sound-visuals,#sound-panel.browsing>.fx-direct,
+  #sound-panel.browsing>.sound-page{display:none!important;}
+  #sound-panel .browser-results{max-height:min(46vh,430px);}
+  .song-workspace .song-panel{padding:11px 12px;}
+  .song-controls{gap:6px;}
+  .song-footnote{font-size:10px;line-height:1.45;}
+}
+
+/* Mid-size desktop/laptop: keep touch hit sizes and 8-per-row entry,
+   but use the available horizontal space and tame huge vertical panels. */
+@media(min-width:901px) and (max-width:1149px){
+  .shell{max-width:none;padding:10px 12px;gap:8px;}
+  .workspace{grid-template-columns:minmax(0,1fr) 225px;gap:8px;}
+  .editor{padding:11px;}
+  .inspector{padding:10px;}
+  .step-cell{height:47px;}
+  .sound-panel{padding:10px 12px;}
+  .sound-viz svg{height:95px;}
+}
