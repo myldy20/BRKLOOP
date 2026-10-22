@@ -110,7 +110,9 @@ export function makeProject({name='BRKLOOP Session',state,arrangement=null,
 export function parseProject(text,baseline,bank){
   if(typeof text!=='string'||text.length>MAX_PROJECT_BYTES)
     throw new RangeError('Project exceeds 5 MB');
-  return makeProject(JSON.parse(text),baseline,bank);
+  const parsed=JSON.parse(text);
+  if(parsed?.format!==PROJECT_FORMAT)throw new TypeError('Unsupported BRKLOOP project format');
+  return makeProject(parsed,baseline,bank);
 }
 export function serializeProject(value,baseline,bank){
   const project=makeProject(value,baseline,bank);
