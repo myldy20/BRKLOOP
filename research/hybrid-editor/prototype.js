@@ -929,7 +929,7 @@ function browserEntries(){
   const filter=$('sound-browser-engine').value;
   return [...(!drums?userSounds.map(userSoundItem):[]),...soundEntries].filter(x=>
     (drums?x.kind==='k':x.kind!=='k')&&
-    (!soundBrowserOwnOnly||x.kind==='u')&&
+    (!soundBrowserOwnOnly||drums||x.kind==='u')&&
     (drums||filter==='all'||x.engine===Number(filter))&&
     (!soundBrowserSavedOnly||x.kind==='u'||soundFavorites.has(x.id))&&
     (!query||(x.name+' '+x.category).toLocaleLowerCase().includes(query)));
