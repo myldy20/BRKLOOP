@@ -57,6 +57,31 @@ try{
     assert.equal(await page.locator('#keyboard-area').isVisible(),true);
     assert.equal(await page.locator('#keyboard').isVisible(),d.name==='desktop',
       'On narrow screens a sticky piano is collapsed until the musician opens it');
+    // Desktop: 1440px should be an actual workstation, not a centered
+    // 1320px webpage with four stacked headers and two 8-step rows.
+    const patternRowSizes=await page.locator('#grid .step-row').evaluateAll(
+      rows=>rows.map(row=>row.children.length));
+    assert.deepEqual(patternRowSizes,d.name==='desktop'?[16]:[8,8],
+      '16 native steps in one bar on wide desktop; 8-per-row touch layout retained');
+    const patternGeometry=await page.evaluate(()=>{
+      const box=id=>document.querySelector(id).getBoundingClientRect();
+      const h=box('header'),top=box('.topbar'),tracks=box('#tracks'),
+        nav=box('.workspace-tabs'),canvas=box('#grid'),shell=box('.shell');
+      return {hY:h.y,topY:top.y,tracksY:tracks.y,navY:nav.y,
+        canvasY:canvas.y,shellWidth:shell.width,
+        viewport:innerWidth,bodyScrollWidth:document.body.scrollWidth};
+    });
+    assert(patternGeometry.bodyScrollWidth<=d.viewport.width+2,'No horizontal page overflow');
+    if(d.name==='desktop'){
+      assert(Math.abs(patternGeometry.hY-patternGeometry.topY)<12,
+        'Transport and identity share first desktop header row');
+      assert(Math.abs(patternGeometry.tracksY-patternGeometry.navY)<12,
+        'Tracks and Pattern/Song/Sound navigation share second header row');
+      assert(patternGeometry.shellWidth>=1405,
+        'Desktop shell must use near full 1440px viewport rather than 1320px cap');
+      assert(patternGeometry.canvasY<290,
+        'Native step editor should be visible near the top, not pushed below four stacked bars');
+    }
     await page.locator('#tool-scene').click();
     assert.equal(await page.locator('#tool-scene').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#scene-panel').isVisible(),true);
@@ -435,6 +460,22 @@ try{
       'One click from Pattern opens Sound for the selected track');
     assert.equal(await page.locator('#sound-panel').isVisible(),true);
     assert.equal(await page.locator('#pattern-panel').isVisible(),false);
+    if(d.name==='desktop'){
+      const desktopSound=await page.evaluate(()=>{
+        const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+        return {graphs:[...document.querySelectorAll('.sound-viz')].map(x=>x.getBoundingClientRect()),
+          fx:rect('#fx-direct'),macros:rect('#sound-panel>.sound-page[data-page="tone"]'),
+          panel:rect('#sound-panel'),viewport:innerWidth,body:document.body.scrollWidth};
+      });
+      assert(desktopSound.body<=desktopSound.viewport+2,
+        'Dense Sound interface never creates horizontal overflow');
+      assert(desktopSound.graphs.every(x=>Math.abs(x.y-desktopSound.graphs[0].y)<5),
+        'ADSR, LFO and Filter should share a horizontal editable band');
+      assert(Math.abs(desktopSound.fx.y-desktopSound.macros.y)<7,
+        'FX mixer and engine dials occupy parallel columns rather than stacking');
+      assert(desktopSound.panel.width>1300,
+        'Sound editing must use available screen width');
+    }
     // Search across all 153 native engine sounds. Selection previews in
     // AudioWorklet without replacing the current track until Use.
     assert.equal(await page.locator('#sound-browser').isVisible(),false);
