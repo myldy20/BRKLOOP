@@ -145,7 +145,7 @@ function soundState(){
   return state;
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
-function status(message){$('status').textContent=message;}
+function status(message){$('status').textContent=message;$('status').title=message;}
 function commit(cmd){
   try{
     if(songPlaying)stopSongPlayback();
@@ -341,13 +341,16 @@ function renderOptions(){
 function renderStep(){
   const {v,track}=current(),length=clamp(track.p[29],1,64),canvas=$('grid');
   canvas.replaceChildren();
+  // Wide editor: a full 16-step bar fits on one line. Narrow and touch
+  // layouts retain the tested, comfortably tappable 8-step rows.
+  const stepsPerRow=window.matchMedia('(min-width:1150px)').matches?16:8;
   for(let base=0;base<length;base+=16){
     const section=newEl('section','step-section');
     section.append(newEl('div','section-title','STEPS '+String(base+1).padStart(2,'0')+'–'+String(Math.min(base+16,length)).padStart(2,'0')));
-    for(let half=0;half<2;half++){
-      if(base+half*8>=length)break;
+    for(let offset=0;offset<16;offset+=stepsPerRow){
+      if(base+offset>=length)break;
       const row=newEl('div','step-row');
-      for(let i=base+half*8;i<Math.min(base+half*8+8,length);i++){
+      for(let i=base+offset;i<Math.min(base+offset+stepsPerRow,length);i++){
         const s=v.track===3?track.dstep[i]:track.step[i];
         const isOn=v.track===3?!!(s.on&(1<<drumLane)):s.n>0&&s.time===0;
         const b=newEl('button','step-cell'+(isOn?' active':'')+(i===v.step?' selected':''));
@@ -1625,6 +1628,9 @@ function render(){
   $('undo').disabled=history.undo===0;$('redo').disabled=history.redo===0;
 }
 const initial=session.getView();session.select(initial.track,0);render();
+window.matchMedia('(min-width:1150px)').addEventListener('change',()=>{
+  if(workspaceTab==='pattern'&&current().v.mode==='step')renderStep();
+});
 drawScope();
 attachEnvelopeEditor();
 attachDirectSoundEditors();
