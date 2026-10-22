@@ -6,7 +6,12 @@
 </head><body>
 <div class="shell">
 <header><div><small>BRKLOOP / STUDIO</small><h1 id="workspace-title">Pattern</h1></div><div class="status" id="status">Experimental editor</div></header>
-<div class="topbar"><button id="play">▶ Play</button><button id="stop">■ Stop</button><span class="divider"></span><button id="undo" aria-label="Undo">↶ Undo</button><button id="redo" aria-label="Redo">↷ Redo</button><div class="transport-tempo"><label>BPM <input id="bpm" type="number" min="40" max="240" step="1" value="90" inputmode="numeric"></label>
+<div class="topbar"><button id="play">▶ Play</button><button id="stop">■ Stop</button><span class="divider"></span><button id="undo" aria-label="Undo">↶ Undo</button><button id="redo" aria-label="Redo">↷ Redo</button>
+<div class="project-files" aria-label="Project files">
+  <button id="project-save" type="button" title="Save all four native tracks and the current song to JSON">↓ SAVE</button>
+  <button id="project-open" type="button" title="Open a saved BRKLOOP project file">↑ OPEN</button>
+  <input id="project-file" type="file" accept=".json,application/json" hidden aria-label="Open BRKLOOP project JSON">
+</div><div class="transport-tempo"><label>BPM <input id="bpm" type="number" min="40" max="240" step="1" value="90" inputmode="numeric"></label>
 <label>SWING <input id="swing" type="number" min="0" max="100" step="1" value="0" inputmode="numeric"></label></div></div>
 <div class="tracks" id="tracks"></div>
 <nav class="workspace-tabs" aria-label="Main workspace">
@@ -424,7 +429,7 @@
 <div id="keyboard" class="keyboard"></div>
 <div id="chord-preview" class="hint"></div>
 </div>
-<footer>BRKLOOP Preview · Original SLOOP DSP / 153 factory sounds · Experimental work is held in this browser tab until exported</footer>
+<footer>BRKLOOP Preview · Original SLOOP DSP / 153 factory sounds · Use ↓ SAVE to keep your complete session</footer>
 </div>
 <script type="module" src="./prototype.js"></script>
 </body></html>
