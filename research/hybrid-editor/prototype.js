@@ -73,7 +73,8 @@ function readSoundFavorites(){
 const soundFavorites=readSoundFavorites();
 const USER_SOUNDS_KEY='brkloop.preview.my-sounds.v1';
 const userSoundLimits={engines:bank.engines.length,pLength:seed.tracks[0].p.length,
-  fm6Length:seed.tracks[0].fm6.length};
+  fm6Length:seed.tracks[0].fm6.length,
+  presetsPerEngine:bank.engines.map(e=>e.presets.length)};
 function readUserSounds(){
   try{
     const text=localStorage.getItem(USER_SOUNDS_KEY);
