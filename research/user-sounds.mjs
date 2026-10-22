@@ -11,12 +11,13 @@ function checkedArray(array,length,label){
     throw new RangeError('Invalid native '+label+' payload');
   return [...array];
 }
-export function validateUserSound(item,{engines=12,pLength=71,fm6Length=128}={}){
+export function validateUserSound(item,{engines=12,pLength=71,fm6Length=128,presetsPerEngine=null}={}){
   if(!item||item.format!==USER_SOUND_FORMAT||typeof item.id!=='string'||
      !/^u:[a-zA-Z0-9_-]{4,70}$/.test(item.id))throw new TypeError('Invalid user sound ID or format');
   const name=cleanName(item.name);
   if(!name||name.length>48)throw new RangeError('Sound name must be 1..48 characters');
-  if(!isInt(item.engine,0,engines-1)||!isInt(item.preset,0,32767))
+  if(!isInt(item.engine,0,engines-1)||!isInt(item.preset,0,32767)||
+     (presetsPerEngine&&!isInt(item.preset,0,presetsPerEngine[item.engine]-1)))
     throw new RangeError('Invalid SLOOP engine/preset');
   return {format:USER_SOUND_FORMAT,id:item.id,name,engine:item.engine,preset:item.preset,
     p:checkedArray(item.p,pLength,'track parameters'),
