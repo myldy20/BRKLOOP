@@ -198,6 +198,8 @@ try{
     // including evolving/locked arrangement sections, DSP state and view.
     const projectDownload=page.waitForEvent('download');
     await page.locator('#project-save').click();
+    assert.match(await page.locator('#status').textContent(),/^PROJECT SAVED/,
+      'Save project should produce a valid native SLOOP document');
     const projectExport=await projectDownload;
     assert.equal(projectExport.suggestedFilename(),'brkloop-project.json');
     const projectJSON=await readFile(await projectExport.path(),'utf8');
