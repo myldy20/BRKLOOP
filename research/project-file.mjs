@@ -45,14 +45,18 @@ function nativeTrack(track,k,baseline,bank){
   number(p[29],1,64,'track LEN');number(p[30],0,8,'track DIV');
   if(k===3)number(p[bank.pe0],0,36,'drum kit');
   const fm6=ints(track.fm6,baseline.tracks[k].fm6.length,-32768,32767,'FM6 data');
-  // Original SLOOP stores 64-note steps for synths and 64 drum hits for
-  // DRUMS, but the *inactive* kind may have a different array length.
-  // Respect the actual compiled baseline track schema instead of requiring
-  // both engines to carry two complete 64-step arrays.
-  const step=seq(track.step,note,'track '+k+' synth steps',
-    baseline.tracks[k].step.length);
-  const dstep=seq(track.dstep,drum,'track '+k+' drum steps',
-    baseline.tracks[k].dstep.length);
+  // Original SLOOP explicitly uses null for an inactive step type:
+  // synth tracks have a null dstep, while DRUMS has a null step.
+  // Preserve these native placeholders verbatim across file export/import.
+  const trackStep=(value,baselineValue,mapper,label)=>{
+    if(baselineValue===null){
+      if(value!==null)throw new TypeError('Invalid '+label+' (must be null)');
+      return null;
+    }
+    return seq(value,mapper,label,baselineValue.length);
+  };
+  const step=trackStep(track.step,baseline.tracks[k].step,note,'track '+k+' synth steps');
+  const dstep=trackStep(track.dstep,baseline.tracks[k].dstep,drum,'track '+k+' drum steps');
   const micro=ints(track.micro,64,-32,31,'microtiming'),
     fill=ints(track.fill,16,0,255,'fills');
   if(!Array.isArray(track.locks)||track.locks.length>24)throw new TypeError('Bad step locks');
