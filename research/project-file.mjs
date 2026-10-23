@@ -32,8 +32,9 @@ function drum(s){
   return {on:number(s.on,0,65535,'drum mask'),lvl:ints(s.lvl,16,0,3,'drum levels'),
     rat:ints(s.rat,16,0,3,'drum ratchets')};
 }
-function seq(values,mapper,label){
-  if(!Array.isArray(values)||values.length!==64)throw new TypeError('Invalid '+label+' length');
+function seq(values,mapper,label,expectedLength=64){
+  if(!Array.isArray(values)||values.length!==expectedLength)
+    throw new TypeError('Invalid '+label+' length (expected '+expectedLength+')');
   return values.map(mapper);
 }
 function nativeTrack(track,k,baseline,bank){
@@ -44,7 +45,14 @@ function nativeTrack(track,k,baseline,bank){
   number(p[29],1,64,'track LEN');number(p[30],0,8,'track DIV');
   if(k===3)number(p[bank.pe0],0,36,'drum kit');
   const fm6=ints(track.fm6,baseline.tracks[k].fm6.length,-32768,32767,'FM6 data');
-  const step=seq(track.step,note,'synth steps'),dstep=seq(track.dstep,drum,'drum steps');
+  // Original SLOOP stores 64-note steps for synths and 64 drum hits for
+  // DRUMS, but the *inactive* kind may have a different array length.
+  // Respect the actual compiled baseline track schema instead of requiring
+  // both engines to carry two complete 64-step arrays.
+  const step=seq(track.step,note,'track '+k+' synth steps',
+    baseline.tracks[k].step.length);
+  const dstep=seq(track.dstep,drum,'track '+k+' drum steps',
+    baseline.tracks[k].dstep.length);
   const micro=ints(track.micro,64,-32,31,'microtiming'),
     fill=ints(track.fill,16,0,255,'fills');
   if(!Array.isArray(track.locks)||track.locks.length>24)throw new TypeError('Bad step locks');
