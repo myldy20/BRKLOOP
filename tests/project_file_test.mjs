@@ -43,6 +43,26 @@ assert.equal(parsed.songIndex,2);
 const recoveredSong=createSongArrangementSession(parsed.arrangement);
 assert.deepEqual(recoveredSong.get(),song);
 assert.equal(arrangementPlaybackStates(recoveredSong.get(),parsed.state).length,4);
+// Hardware-backed browser snapshots have track-specific active step arrays:
+ // the inactive representation must not be padded to 64.
+const sparseBaseline=structuredClone(baseline);
+for(let k=0;k<3;k++)sparseBaseline.tracks[k].dstep=[];
+sparseBaseline.tracks[3].step=[];
+const sparseState=structuredClone(sparseBaseline);
+for(const t of sparseState.tracks)t.p[29]=16;
+const compact=serializeProject({state:sparseState,arrangement:song},sparseBaseline,bank);
+assert.deepEqual(parseProject(compact,sparseBaseline,bank).state,sparseState,
+  'Native synth and drum snapshots with inactive 0-length arrays roundtrip exactly');
+const sparseSession=createResearchEditSession(sparseBaseline);
+assert.equal(sparseSession.restore(sparseState),true);
+assert.deepEqual(sparseSession.getState(),sparseState);
+assert.equal(sparseSession.undo(),true);
+assert.deepEqual(sparseSession.getState(),sparseBaseline);
+assert.equal(sparseSession.redo(),true);
+assert.deepEqual(sparseSession.getState(),sparseState);
+assert.throws(()=>parseProject(JSON.stringify({...JSON.parse(compact),
+  state:{...sparseState,tracks:sparseState.tracks.map((t,k)=>k===1?{...t,dstep:[emptyDrum()]}:t)}
+}),sparseBaseline,bank),/Invalid track 1 drum steps length/);
 const simple=parseProject(serializeProject({state,arrangement:null},baseline,bank),baseline,bank);
 assert.equal(simple.arrangement,null,'pure pattern projects are supported');
 const initial=structuredClone(baseline);
