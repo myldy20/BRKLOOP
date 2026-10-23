@@ -237,7 +237,8 @@ export function createResearchEditSession(initial,{historyLimit=64}={}){
       for(let k=0;k<4;k++){
         const old=current.tracks[k],t=target.tracks[k];
         if(!t||t.p?.length!==old.p.length||t.fm6?.length!==old.fm6.length||
-           t.step?.length!==64||t.dstep?.length!==64||t.micro?.length!==64||
+           t.step?.length!==old.step?.length||t.dstep?.length!==old.dstep?.length||
+           t.micro?.length!==64||
            t.fill?.length!==16||!Array.isArray(t.locks))
           throw new TypeError('Incompatible original SLOOP track '+k);
       }
