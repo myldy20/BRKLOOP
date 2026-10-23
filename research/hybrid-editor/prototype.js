@@ -4,6 +4,7 @@ import {createResearchEditSession} from '../shared-edit-commands.mjs';
 import {USER_SOUND_LIBRARY_FORMAT,MAX_USER_SOUNDS,makeUserSound,
   validateUserSound,importUserSoundFile,exportUserSoundLibrary,
   applyUserSoundToTrack,PRESERVED_TRACK_PARAMS} from '../user-sounds.mjs';
+import {parseProject,serializeProject,MAX_PROJECT_BYTES} from '../project-file.mjs';
 import {LocalPreview} from '../../web/preview.js';
 import {panelAuditionPitch} from './panel-pitch.mjs';
 import {generateDrumGroove, grooveSummary} from '../groove-tools.mjs';
@@ -143,6 +144,51 @@ function soundState(){
   }
   if(songDraft&&workspaceTab==='song')return applyArrangementSection(state,songDraft.sections[songIndex]);
   return state;
+}
+let openedProjectName='BRKLOOP Session';
+function downloadProject(){
+  try{
+    if(songPlaying)stopSongPlayback();
+    const json=serializeProject({name:openedProjectName,state:session.getState(),
+      arrangement:songSession?.get()??songDraft, songIndex,view:session.getView()},seed,bank);
+    const blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='brkloop-project.json';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status('PROJECT SAVED · 4 native tracks · '+(songDraft?'SONG included':'PATTERN and sounds')+
+      ' · keep the JSON file to restore this session');
+  }catch(e){status('Save project failed: '+e.message);}
+}
+async function openProjectFile(file){
+  if(!file)return;
+  try{
+    if(file.size>MAX_PROJECT_BYTES)throw new RangeError('Project exceeds 5 MB');
+    const doc=parseProject(await file.text(),seed,bank);
+    // All input has been validated before touching the playing work or
+    // editor. Invalid files never discard the current music.
+    if(songPlaying)stopSongPlayback();
+    if(soundBrowserOpen)closeSoundBrowser();
+    player?.panic();player?.clearArrangement();
+    const changed=session.restore(doc.state);
+    grooveDraft=null;melodyDraft=null;mutationDraft=null;sceneDraft=null;
+    soundCandidate=null;activeTool=null;
+    songDraft=doc.arrangement;
+    songSession=songDraft?createSongArrangementSession(songDraft):null;
+    songIndex=doc.songIndex;
+    songActive=-1;songCycle=-1;songPlaying=false;
+    openedProjectName=doc.name;
+    session.select(doc.view.track,doc.view.step);
+    session.setMode(doc.view.mode);
+    modeForTrack[doc.view.track]=doc.view.mode;
+    workspaceTab='pattern';
+    keyboardVisible=!compactScreen&&doc.view.mode==='step';
+    player?.sync();render();
+    status('OPENED '+doc.name+' · 4 native tracks · '+
+      (songDraft?songDraft.sections.length+' song sections':'no song')+
+      (changed?' · Undo restores prior score':''));
+  }catch(e){status('Open project rejected: '+e.message);}
+  finally{$('project-file').value='';}
 }
 function current(){const v=session.getView(),state=session.getState();return {v,state,track:state.tracks[v.track]};}
 function status(message){$('status').textContent=message;$('status').title=message;}
@@ -1802,6 +1848,9 @@ for(const id of ['groove','melody','mutation','scene']){
     if(activeTool)$('tool-content').scrollIntoView({block:'nearest',behavior:'instant'});
   });
 }
+$('project-save').addEventListener('click',downloadProject);
+$('project-open').addEventListener('click',()=>$('project-file').click());
+$('project-file').addEventListener('change',e=>void openProjectFile(e.target.files?.[0]));
 $('pattern-tab').addEventListener('click',()=>selectWorkspace('pattern'));
 $('song-tab').addEventListener('click',()=>selectWorkspace('song'));
 $('sound-tab').addEventListener('click',()=>selectWorkspace('sound'));
