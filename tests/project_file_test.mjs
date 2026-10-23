@@ -63,6 +63,26 @@ assert.deepEqual(sparseSession.getState(),sparseState);
 assert.throws(()=>parseProject(JSON.stringify({...JSON.parse(compact),
   state:{...sparseState,tracks:sparseState.tracks.map((t,k)=>k===1?{...t,dstep:[emptyDrum()]}:t)}
 }),sparseBaseline,bank),/Invalid track 1 drum steps length/);
+// Real compiled SLOOP uses null on inactive step kinds. Previous validator
+// incorrectly required drum steps on synths and synth notes on DRUMS.
+const nativeBaseline=structuredClone(baseline);
+for(let k=0;k<3;k++)nativeBaseline.tracks[k].dstep=null;
+nativeBaseline.tracks[3].step=null;
+const nativeState=structuredClone(nativeBaseline);
+for(const track of nativeState.tracks)track.p[29]=16;
+const nativeJSON=serializeProject({state:nativeState,arrangement:song},nativeBaseline,bank);
+assert.deepEqual(parseProject(nativeJSON,nativeBaseline,bank).state,nativeState,
+  'Original SLOOP null inactive pattern arrays survive save and load');
+const nativeSession=createResearchEditSession(nativeBaseline);
+assert.equal(nativeSession.restore(nativeState),true);
+assert.deepEqual(nativeSession.getState(),nativeState);
+assert.equal(nativeSession.undo(),true);
+assert.deepEqual(nativeSession.getState(),nativeBaseline);
+assert.equal(nativeSession.redo(),true);
+assert.deepEqual(nativeSession.getState(),nativeState);
+assert.throws(()=>parseProject(JSON.stringify({...JSON.parse(nativeJSON),
+  state:{...nativeState,tracks:nativeState.tracks.map((t,k)=>k===0?{...t,dstep:[]}:t)}
+}),nativeBaseline,bank),/must be null/);
 const simple=parseProject(serializeProject({state,arrangement:null},baseline,bank),baseline,bank);
 assert.equal(simple.arrangement,null,'pure pattern projects are supported');
 const initial=structuredClone(baseline);
