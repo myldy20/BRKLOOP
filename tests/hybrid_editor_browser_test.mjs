@@ -196,11 +196,13 @@ try{
 
     // A saved project is the actual four-track native song session,
     // including evolving/locked arrangement sections, DSP state and view.
-    const projectDownload=page.waitForEvent('download');
+    const projectDownload=page.waitForEvent('download',{timeout:7000}).catch(()=>null);
     await page.locator('#project-save').click();
-    assert.match(await page.locator('#status').textContent(),/^PROJECT SAVED/,
+    const projectStatus=await page.locator('#status').textContent();
+    assert.match(projectStatus,/^PROJECT SAVED/,
       'Save project should produce a valid native SLOOP document');
     const projectExport=await projectDownload;
+    assert(projectExport,'Saved native project file should download');
     assert.equal(projectExport.suggestedFilename(),'brkloop-project.json');
     const projectJSON=await readFile(await projectExport.path(),'utf8');
     const projectObject=JSON.parse(projectJSON);
